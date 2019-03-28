@@ -3,221 +3,150 @@ Transform: 'AWS::Serverless-2016-10-31'
 Description : "Creates the Session Workflow StepFunctions" 
 
 Outputs:
-
-
+  SessionManagerFunction:
+    Description: "The Session Manager Lambda Function ARN to connect with the SessionManagerSNSTopic in Step 2"
+    Value: !GetAtt SessionManager.Arn
 
 Parameters: 
-  StateMachineName: 
+  SumerianMessageQueueFIFO:
     Type: String
-    Default: ReceptionWorkflow
-    Description: Reception State Machine Name 
-
-  HostSNSTopic: 
+    Description: "Please enter the SumerianMessageQueueFIFO value from Step 2"
+  WorkflowNotificationSNSTopic: 
     Type: String
-    Default: HostSNSTopic
-    Description: Reception Host Response API
-
+    Description: "Please enter the WorkflowNotificationSNSTopic value from Step 2"
+  WorkflowFunctionsExecutionRole:
+    Type: String
+    Description: "Please enter the WorkflowFunctionsExecutionRole value from Step 1"
 Resources:
-  # CognitoIdentityPool:
-  #       Type: AWS::Cognito::IdentityPool
-  #       Properties:
-  #         IdentityPoolName:
-  #           Fn::Sub: "SumerianCognitoIdentityPool"
-  #         AllowUnauthenticatedIdentities: True
-  # CognitoIdentityExampleRole:
-  #       Type: AWS::IAM::Role
-  #       Properties:
-  #         AssumeRolePolicyDocument:
-  #           Version: '2012-10-17'
-  #           Statement:
-  #           - Action: sts:AssumeRoleWithWebIdentity
-  #             Effect: Allow
-  #             Principal:
-  #               Federated: 'cognito-identity.amazonaws.com'
-  #             Condition:
-  #               StringEquals:
-  #                 cognito-identity.amazonaws.com:aud:
-  #                   Ref: CognitoIdentityPool
-  #         ManagedPolicyArns:
-  #         - arn:aws:iam::aws:policy/AmazonPollyFullAccess
-  #         - arn:aws:iam::aws:policy/AmazonLexFullAccess
-  #         - arn:aws:iam::aws:policy/AmazonSQSFullAccess
-  #         - arn:aws:iam::aws:policy/AWSIoTFullAccess
-  #         - arn:aws:iam::aws:policy/AmazonSNSFullAccess
-  #         - arn:aws:iam::aws:policy/AmazonS3FullAccess
-  #         - arn:aws:iam::aws:policy/AmazonRekognitionFullAccess
-  #         - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
-  # CognitoRoleAttachment:
-  #     Type: "AWS::Cognito::IdentityPoolRoleAttachment"
-  #     Properties:
-  #       IdentityPoolId:
-  #         Ref: CognitoIdentityPool
-  #       Roles:
-  #         unauthenticated:
-  #           Fn::GetAtt: [CognitoIdentityExampleRole, Arn]
 
-  # ExecutionRole:
-  #     Type: "AWS::IAM::Role"
-  #     Properties:
-  #       AssumeRolePolicyDocument:
-  #         Statement:
-  #           -
-  #             Effect: "Allow"
-  #             Principal:
-  #               Service:
-  #                 - "apigateway.amazonaws.com"
-  #                 - "lambda.amazonaws.com"
-  #                 -
-  #                   Fn::Join:
-  #                     - ""
-  #                     - - "states."
-  #                       -
-  #                         Ref: "AWS::Region"
-  #                       - ".amazonaws.com"
-  #             Action:
-  #               - "sts:AssumeRole"
-  #       Path: "/"
-  #       Policies:
-  #         -
-  #           PolicyName: "Policies"
-  #           PolicyDocument:
-  #             Statement:
-  #               -
-  #                 Effect: "Allow"
-  #                 Action: "*"
-  #                 Resource: "*"
-
-  # SumerianMessageQueueFIFO:
-  #   Type: "AWS::SQS::Queue"
-  #   Properties:
-  #     QueueName: "SumerianMessageQueue.fifo"
-  #     FifoQueue: true
-                  
-#### SESSION FUNCTIONS
-
-  sumerianmessenger:
+  ########################################################
+  # Lambda Functions responsible for the entier workdlow #
+  ########################################################
+  SumerianMessenger:
     Type: 'AWS::Serverless::Function'
     Properties:
       Handler: sumerianmessenger.lambda_handler
       Runtime: python3.6
-      Description: 'Send Message to Summerian Host'
+      Description: 'Lambda Function responsible for putting Message into SumerianMessageQueueFIFO'
       MemorySize: 1536
       Timeout: 15
-      Role: !GetAtt ExecutionRole.Arn
-      CodeUri: ./sessionhandler-lambda
+      Role: !Ref WorkflowFunctionsExecutionRole
+      CodeUri: ./workflow-lambda
       Environment:
         Variables:
           QueueUrl: !Ref SumerianMessageQueueFIFO
-          employeetable: !Ref employeetable
+          EmployeeTable: !Ref EmployeeTable
       Layers:
-          - !Ref sessionmanagertoolkit
+          - !Ref WorkflowManagerToolKit
 
-  checkfacecaptured:
+  CheckFaceCaptured:
     Type: 'AWS::Serverless::Function'
     Properties:
       Handler: checkfacecaptured.lambda_handler
       Runtime: python3.6
-      Description: 'Check if face captured or not.'
+      Description: 'Lambda Function to check if face captured'
       MemorySize: 1536
       Timeout: 15
-      Role: !GetAtt ExecutionRole.Arn
-      CodeUri: ./sessionhandler-lambda
+      Role: !Ref WorkflowFunctionsExecutionRole
+      CodeUri: ./workflow-lambda
       Environment:
         Variables:
-          sessiontable: !Ref sessiontable
+          SessionTable: !Ref SessionTable
       Layers:
-          - !Ref sessionmanagertoolkit
+          - !Ref WorkflowManagerToolKit
 
-  clearsession:
+  ClearSession:
     Type: 'AWS::Serverless::Function'
     Properties:
       Handler: clearsession.lambda_handler
       Runtime: python3.6
-      Description: 'Check if face captured or not.'
+      Description: 'Lambda Function Responsible to clear session'
       MemorySize: 1536
       Timeout: 15
-      Role: !GetAtt ExecutionRole.Arn
-      CodeUri: ./sessionhandler-lambda
+      Role: !Ref WorkflowFunctionsExecutionRole
+      CodeUri: ./workflow-lambda
       Environment:
         Variables:
-          sessiontable: !Ref sessiontable
+          SessionTable: !Ref SessionTable
       Layers:
-          - !Ref sessionmanagertoolkit
+          - !Ref WorkflowManagerToolKit
 
-  sessionmanager:
+  SessionManager:
     Type: 'AWS::Serverless::Function'
     Properties:
       Handler: sessionmanager.lambda_handler
       Runtime: python3.6
-      Description: 'Check if face captured or not.'
+      Description: 'Lambda Function Responsible to manage session being executed'
       MemorySize: 1536
       Timeout: 15
-      Role: !GetAtt ExecutionRole.Arn
-      CodeUri: ./sessionhandler-lambda
+      Role: !Ref WorkflowFunctionsExecutionRole
+      CodeUri: ./workflow-lambda
       Environment:
         Variables:
           ResponseUrl: 
             'Fn::Sub':
                   - "https://${Api}.execute-api.${AWS::Region}.amazonaws.com/Prod/notifyguest"
-                  - { Api: !Ref hostresponseapi }
-          sessiontable: !Ref sessiontable
+                  - { Api: !Ref NotificationResponseApi }
+          SessionTable: !Ref SessionTable
       Layers:
-          - !Ref sessionmanagertoolkit
+          - !Ref WorkflowManagerToolKit
 
-  appointmentlookup:
+  AppointmentLookup:
     Type: 'AWS::Serverless::Function'
     Properties:
       Handler: appointmentlookup.lambda_handler
       Runtime: python3.6
-      Description: 'Check face detected for Appointment'
+      Description: 'Lambda Function responsible to check available appointment.'
       MemorySize: 1536
       Timeout: 15
-      Role: !GetAtt ExecutionRole.Arn
-      CodeUri: ./sessionhandler-lambda
+      Role: !Ref WorkflowFunctionsExecutionRole
+      CodeUri: ./workflow-lambda
       Environment:
         Variables:
-          appointmenttable: !Ref appointmenttable
+          AppointmentTable: !Ref AppointmentTable
       Layers:
-          - !Ref sessionmanagertoolkit
+          - !Ref WorkflowManagerToolKit
 
-  hostmessenger:
+  SendNotification:
     Type: 'AWS::Serverless::Function'
     Properties:
-      Handler: hostmessenger.lambda_handler
+      Handler: sendnotification.lambda_handler
       Runtime: python3.6
-      Description: 'Trigger Slack API to notify guest arrival'
+      Description: 'Trigger Notification with a URL to response back'
       MemorySize: 1536
       Timeout: 15
-      Role: !GetAtt ExecutionRole.Arn
-      CodeUri: ./sessionhandler-lambda
+      Role: !Ref WorkflowFunctionsExecutionRole
+      CodeUri: ./workflow-lambda
       Environment:
         Variables:
           ResponseUrl: 
             'Fn::Sub':
                   - "https://${Api}.execute-api.${AWS::Region}.amazonaws.com/Prod/notifyguest"
-                  - { Api: !Ref hostresponseapi }
-          SNSTopic: !Ref snshost
-          ActivityHostResponseArn: !Ref activityhostresponse
-          ActivityHostArrivalArn: !Ref activityhostarrival
-          sessiontable: !Ref sessiontable
+                  - { Api: !Ref NotificationResponseApi }
+          SNSTopic: 
+            'Fn::Sub':
+                  - "arn:aws:sns:${AWS::Region}:${AWS::AccountId}:${SNS}"
+                  - { SNS: !Ref WorkflowNotificationSNSTopic }
+          ActivityHostResponseArn: !Ref ActivityHostResponse
+          ActivityHostArrivalArn: !Ref ActivityHostArrival
+          SessionTable: !Ref SessionTable
       Layers:
-          - !Ref sessionmanagertoolkit
+          - !Ref WorkflowManagerToolKit
           
-  hostresponsemanager:
+  ResponseManager:
     Type: 'AWS::Serverless::Function'
     Properties:
-      Handler: hostresponsemanager.lambda_handler
+      Handler: responsemanager.lambda_handler
       Runtime: python3.6
       Description: 'Manage Virtual Concierge Session'
       MemorySize: 1536
       Timeout: 15
-      Role: !GetAtt ExecutionRole.Arn
-      CodeUri: ./sessionhandler-lambda
+      Role: !Ref WorkflowFunctionsExecutionRole
+      CodeUri: ./workflow-lambda
       Layers:
-          - !Ref sessionmanagertoolkit
+          - !Ref WorkflowManagerToolKit
           
-          
-  flattenresponse:
+  FlattenResponse:
     Type: 'AWS::Serverless::Function'
     Properties:
       Handler: flattenresponse.lambda_handler
@@ -225,26 +154,23 @@ Resources:
       Description: 'Flatten Payload response from List of JSON to JSON'
       MemorySize: 1536
       Timeout: 15
-      Role: !GetAtt ExecutionRole.Arn
-      CodeUri: ./sessionhandler-lambda
+      Role: !Ref WorkflowFunctionsExecutionRole
+      CodeUri: ./workflow-lambda
       Layers:
-          - !Ref sessionmanagertoolkit
+          - !Ref WorkflowManagerToolKit
      
-### API
-  sessionmanagertoolkit:
+  WorkflowManagerToolKit:
     Type: AWS::Serverless::LayerVersion
     Properties:
-      ContentUri: ./sessionhandler-lambda/layers/smtoolkit/
+      ContentUri: ./workflow-lambda/layers/smtoolkit/
       CompatibleRuntimes:
         - python3.6
       LicenseInfo: 'Apache License, Version 2.0 (the "License")'
 
-### TODO: Use AWS::Serverless::Function' with event type of API
-
-  hostresponseapi:
+  NotificationResponseApi:
     Type: 'AWS::Serverless::Api'
     Properties:
-        Name: hostresponseapi
+        Name: NotificationResponseApi
         StageName: Prod
         DefinitionBody: 
           swagger: "2.0"
@@ -269,14 +195,11 @@ Resources:
                 responses: {"200": {"description": "200 response","schema": {"$ref": "#/definitions/Empty"}}}
                 x-amazon-apigateway-request-validator: "Validate query string parameters and headers"
                 x-amazon-apigateway-integration:
-                  credentials: 
-                      'Fn::GetAtt' :
-                        - ExecutionRole
-                        - Arn
+                  credentials: !Ref WorkflowFunctionsExecutionRole
                   uri: 
                     'Fn::Sub':
                         - "arn:aws:apigateway:${AWS::Region}:lambda:path//2015-03-31/functions/${lambdafunc}/invocations"
-                        - { lambdafunc: !GetAtt hostresponsemanager.Arn }
+                        - { lambdafunc: !GetAtt ResponseManager.Arn }
                   responses:
                     default:
                       statusCode: "200"
@@ -293,15 +216,14 @@ Resources:
             Validate query string parameters and headers:
               validateRequestParameters: true
               validateRequestBody: false
+              
+              
+  ######################################
+  # DynamoDB Tables to manage Sessions #
+  ######################################
 
-#####
-
-  # snshost: 
-  #   Type: "AWS::SNS::Topic"
-  #   Properties:
-  #     DisplayName: !Ref HostSNSTopic
   
-  sessiontable:
+  SessionTable:
     Type: "AWS::DynamoDB::Table"
     Properties:
       AttributeDefinitions:
@@ -315,9 +237,9 @@ Resources:
       ProvisionedThroughput:
         ReadCapacityUnits: "1"
         WriteCapacityUnits: "1"
-      # TableName: "virtual-concierge-session"
+      TableName: "WorkFlowSessionTable"
   
-  appointmenttable:
+  AppointmentTable:
     Type: "AWS::DynamoDB::Table"
     Properties:
       AttributeDefinitions:
@@ -331,11 +253,9 @@ Resources:
       ProvisionedThroughput:
         ReadCapacityUnits: "1"
         WriteCapacityUnits: "1"
-      # TableName: "virtual-concierge-appointment-table"
+      TableName: "WorkFlowAppointmentTable"
 
-### TODO: Add 'Visitor' and rename 'Employee' to 'Host'
-
-  employeetable:
+  EmployeeTable:
     Type: "AWS::DynamoDB::Table"
     Properties:
       AttributeDefinitions:
@@ -349,23 +269,27 @@ Resources:
       ProvisionedThroughput:
         ReadCapacityUnits: "1"
         WriteCapacityUnits: "1"
-      # TableName: "virtual-concierge-employee-table"
+      TableName: "WorkFlowEmployeeTable"
 
 
-  activityhostresponse:
+  #############################################
+  # StepFunction Resources to manage Sessions #
+  #############################################
+
+  ActivityHostResponse:
     Type: "AWS::StepFunctions::Activity"
     Properties:
-      Name: activitynewhostresponse
+      Name: ActivityHostResponse
       
-  activityhostarrival:
+  ActivityHostArrival:
     Type: "AWS::StepFunctions::Activity"
     Properties:
-      Name: activitynewhostarrival
+      Name: ActivityHostArrival
 
-  receptionstatemachine:
+  WorkFlowStateMachine:
     Type: AWS::StepFunctions::StateMachine
     Properties:
-      StateMachineName: !Ref StateMachineName
+      StateMachineName: "WorkFlowStateMachine"
       DefinitionString: 
                   !Sub  
                     - |-
@@ -375,7 +299,7 @@ Resources:
                         	"States": {
                         		"Check detected face": {
                         			"Type": "Task",
-                        			"Resource": "${checkfacecaptured}",
+                        			"Resource": "${CheckFaceCaptured}",
                         			"Next": "Do we know the Face ?"
                         		},
                         		"Do we know the Face ?": {
@@ -395,7 +319,7 @@ Resources:
                         		},
                         		"[Sumerian] unkown guest message": {
                         			"Type": "Task",
-                        			"Resource": "${sumerianmessenger}",
+                        			"Resource": "${SumerianMessenger}",
                         			"Parameters" : {
                         			  "SumerianMessageType" : "UnknownGuest",
                         			  "PreviousStateOutput.$" : "$"
@@ -404,7 +328,7 @@ Resources:
                         		},
                         		"[Sumerian] no appointment message": {
                         			"Type": "Task",
-                        			"Resource": "${sumerianmessenger}",
+                        			"Resource": "${SumerianMessenger}",
                         			"Parameters" : {
                         			  "SumerianMessageType" : "NoAppointment",
                         			  "PreviousStateOutput.$" : "$"
@@ -413,7 +337,7 @@ Resources:
                         		},
                         		"[Sumerian] greet guest": {
                         			"Type": "Task",
-                        			"Resource": "${sumerianmessenger}",
+                        			"Resource": "${SumerianMessenger}",
                         			"Parameters" : {
                         			  "SumerianMessageType" : "GreetGuest",
                         			  "PreviousStateOutput.$" : "$"
@@ -422,7 +346,7 @@ Resources:
                         		},
                         		"Lookup Appointment": {
                         			"Type": "Task",
-                        			"Resource": "${appointmentlookup}",
+                        			"Resource": "${AppointmentLookup}",
                         			"Next": "Do we found any appointment ?"
                         		},
                         		"Do we found any appointment ?": {
@@ -442,7 +366,7 @@ Resources:
                         		},
                         		"[Sumerian] notify host message": {
                         			"Type": "Task",
-                        			"Resource": "${sumerianmessenger}",
+                        			"Resource": "${SumerianMessenger}",
                         			"Parameters" : {
                         			  "SumerianMessageType" : "NotifyHost",
                         			  "PreviousStateOutput.$" : "$"
@@ -458,7 +382,7 @@ Resources:
                         					"States": {
                         						"Notify host": {
                         							"Type": "Task",
-                        							"Resource": "${hostmessenger}",
+                        							"Resource": "${SendNotification}",
                         							"Parameters" : {
                                 			  "Activity" : "HostResponse",
                                 			  "PreviousStateOutput.$" : "$"
@@ -472,7 +396,7 @@ Resources:
                         					"States": {
                         						"ActivityJob-Wait for host response": {
                         							"Type": "Task",
-                        							"Resource": "${activityhostresponse}",
+                        							"Resource": "${ActivityHostResponse}",
                         							"End": true
                         						}
                         					}
@@ -481,7 +405,7 @@ Resources:
                         		},
                         		"Flatten response payload": {
                         			"Type": "Task",
-                        			"Resource": "${flattenresponse}",
+                        			"Resource": "${FlattenResponse}",
                         			"Next": "Has the host responded ?"
                         		}, 	
                         		"Has the host responded ?": {
@@ -501,12 +425,12 @@ Resources:
                         		},
                         		"[ Sumerian ] Notify Visitor on Remind Host": {
                         			"Type": "Task",
-                        			"Resource": "${sumerianmessenger}",
+                        			"Resource": "${SumerianMessenger}",
                         			"Next": "Send notification to host"
                         		}, 		
                         		"[ Sumerian ] Notify Visitor on Host Response": {
                         			"Type": "Task",
-                        			"Resource": "${sumerianmessenger}",
+                        			"Resource": "${SumerianMessenger}",
                         			"Next": "Notify Visitor and Wait"
                         		},
                         		"Notify Visitor and Wait": {
@@ -517,7 +441,7 @@ Resources:
                         					"States": {
                         						"[Sumerian] notify guest on host arrival": {
                         							"Type": "Task",
-                        							"Resource": "${hostmessenger}",
+                        							"Resource": "${SendNotification}",
                         							"Parameters" : {
                                 			  "Activity" : "HostArrival",
                                 			  "PreviousStateOutput.$" : "$"
@@ -531,7 +455,7 @@ Resources:
                         					"States": {
                         						"ActivityJob-Wait for Host Arrival": {
                         							"Type": "Task",
-                        							"Resource": "${activityhostarrival}",
+                        							"Resource": "${ActivityHostArrival}",
                         							"End": true
                         						}
                         					}
@@ -540,15 +464,15 @@ Resources:
                         		},
                         		"[Sumerian] Notify host and guest on meeting room number": {
                         			"Type": "Task",
-                        			"Resource": "${sumerianmessenger}",
+                        			"Resource": "${SumerianMessenger}",
                         			"Next": "Clear Session"
                         		},
-                        		"Clear Session": {
+                        		"Clear Session":{
                         			"Type": "Task",
-                        			"Resource": "${clearsession}",
+                        			"Resource": "${ClearSession}",
                         			"End": true
                         		}
                         	}
                         }
-                    - { clearsession: !GetAtt clearsession.Arn, flattenresponse: !GetAtt flattenresponse.Arn, hostmessenger: !GetAtt hostmessenger.Arn, activityhostresponse: !Ref activityhostresponse , activityhostarrival: !Ref activityhostarrival , sumerianmessenger: !GetAtt sumerianmessenger.Arn, checkfacecaptured: !GetAtt checkfacecaptured.Arn, appointmentlookup: !GetAtt appointmentlookup.Arn }
-      RoleArn: !GetAtt ExecutionRole.Arn
+                    - { ClearSession: !GetAtt ClearSession.Arn, FlattenResponse: !GetAtt FlattenResponse.Arn, SendNotification: !GetAtt SendNotification.Arn, ActivityHostResponse: !Ref ActivityHostResponse , ActivityHostArrival: !Ref ActivityHostArrival , SumerianMessenger: !GetAtt SumerianMessenger.Arn, CheckFaceCaptured: !GetAtt CheckFaceCaptured.Arn, AppointmentLookup: !GetAtt AppointmentLookup.Arn }
+      RoleArn: !Ref WorkflowFunctionsExecutionRole

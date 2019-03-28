@@ -1,0 +1,21 @@
+AWSTemplateFormatVersion : 2010-09-09
+Description: Creates the S3 bucket that will be used to store all the codes for our worklow.
+
+Parameters: 
+  YourFullName: 
+    Type: String
+    Description: Please enter your full name without space in lower case, this will be added as prefix to your bucket name
+
+Outputs:
+  WorkflowCodeBucket:
+    Description: The S3 Bucket we will use to store codes.
+    Value: !Ref WorkflowCodeBucket
+
+Resources:
+    WorkflowCodeBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: 
+            !Sub 
+              - '${YourFullName}-workflowcodebucket-${AWS::Region}-${AWS::AccountId}'
+              - { YourFullName: !Ref YourFullName }

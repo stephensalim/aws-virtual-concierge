@@ -1,0 +1,90 @@
+AWSTemplateFormatVersion : 2010-09-09
+Description: Creates all identity and roles required for the workflow.
+
+Outputs:
+  CognitoIdentityPoolID:
+    Description: The cognito identity pool for sumerian to communicate with AWS services.
+    Value:
+      Ref: CognitoIdentityPool
+
+  WorkflowFunctiuonsExecutionRole:
+    Description: IAM Role that will be used by Lambda Functions and the test of the workflow process
+    Value:
+      Ref: WorkflowFunctiuonsExecutionRole
+
+Resources:
+    ##############################################
+    # Resouces for Summerian to assume Identitiy #
+    ##############################################
+    CognitoIdentityPool:
+        Type: AWS::Cognito::IdentityPool
+        Properties:
+          IdentityPoolName:
+            Fn::Sub: "SumerianCognitoIdentityPool"
+          AllowUnauthenticatedIdentities: True
+    CognitoIdentityExampleRole:
+        Type: AWS::IAM::Role
+        Properties:
+          AssumeRolePolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Action: sts:AssumeRoleWithWebIdentity
+              Effect: Allow
+              Principal:
+                Federated: 'cognito-identity.amazonaws.com'
+              Condition:
+                StringEquals:
+                  cognito-identity.amazonaws.com:aud:
+                    Ref: CognitoIdentityPool
+          ManagedPolicyArns:
+          - arn:aws:iam::aws:policy/AmazonPollyFullAccess
+          - arn:aws:iam::aws:policy/AmazonLexFullAccess
+          - arn:aws:iam::aws:policy/AmazonSQSFullAccess
+          - arn:aws:iam::aws:policy/AWSIoTFullAccess
+          - arn:aws:iam::aws:policy/AmazonSNSFullAccess
+          - arn:aws:iam::aws:policy/AmazonS3FullAccess
+          - arn:aws:iam::aws:policy/AmazonRekognitionFullAccess
+          - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
+    CognitoRoleAttachment:
+      Type: "AWS::Cognito::IdentityPoolRoleAttachment"
+      Properties:
+        IdentityPoolId:
+          Ref: CognitoIdentityPool
+        Roles:
+          unauthenticated:
+            Fn::GetAtt: [CognitoIdentityExampleRole, Arn]
+            
+            
+    #########################################################
+    # Resouces for the entire workflow to do it's acitivity #
+    #########################################################
+    WorkflowFunctiuonsExecutionRole:
+        Type: "AWS::IAM::Role"
+        Properties:
+          AssumeRolePolicyDocument:
+            Statement:
+              -
+                Effect: "Allow"
+                Principal:
+                  Service:
+                    - "apigateway.amazonaws.com"
+                    - "lambda.amazonaws.com"
+                    -
+                      Fn::Join:
+                        - ""
+                        - - "states."
+                          -
+                            Ref: "AWS::Region"
+                          - ".amazonaws.com"
+                Action:
+                  - "sts:AssumeRole"
+          Path: "/"
+          Policies:
+            -
+              PolicyName: "Policies"
+              PolicyDocument:
+                Statement:
+                  -
+                    Effect: "Allow"
+                    Action: "*"
+                    Resource: "*"

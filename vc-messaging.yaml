@@ -1,0 +1,43 @@
+AWSTemplateFormatVersion : 2010-09-09
+Description: Creates all messaging services that will be used to by sumerian and the workflow.
+
+Outputs:
+  SumerianMessageQueueFIFO:
+    Description: The message queue that will be used to receive instructions from workflow.
+    Value: !Ref SumerianMessageQueueFIFO
+    
+  WorkflowNotificationSNSTopic:
+    Description: SNS Topic to send notification from Workflow
+    Value: !GetAtt WorkflowNotificationSNSTopic.TopicName
+    
+  SessionManagerSNSTopic:
+    Description: SNS topic responsible to send Face informatin to SessionManager Function
+    Value: !GetAtt SessionManagerSNSTopic.TopicName
+    
+Resources:
+
+    ####################################################################
+    # Message Queue for sumerian to receive instructions from workflow #
+    ####################################################################
+    SumerianMessageQueueFIFO:
+      Type: "AWS::SQS::Queue"
+      Properties:
+        QueueName: "SumerianMessageQueueFIFO.fifo"
+        FifoQueue: true
+            
+    #########################################################
+    # SNS Topic for Workflow to send Notification & Updates #
+    #########################################################
+    WorkflowNotificationSNSTopic: 
+      Type: "AWS::SNS::Topic"
+      Properties:
+         TopicName: "WorkflowNotificationSNSTopic"
+         
+    #########################################################
+    # SNS Topic That will receive detected face information #
+    # To be paired with SessionManager Lambda Function      #
+    #########################################################
+    SessionManagerSNSTopic: 
+      Type: "AWS::SNS::Topic"
+      Properties:
+         TopicName: "SessionManagerSNSTopic"
