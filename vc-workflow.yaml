@@ -7,6 +7,17 @@ Outputs:
     Description: "The Session Manager Lambda Function ARN to connect with the SessionManagerSNSTopic in Step 2"
     Value: !GetAtt SessionManager.Arn
 
+  VisitorTable:
+    Description: "The DynamoDB Containing Registered Visitor Table"
+    Value: !GetAtt VisitorTable.Arn
+    
+  NotificationAPIurl:
+    Description: "The DynamoDB Containing Registered Visitor Table"
+    Value: 
+        'Fn::Sub':
+            - "https://${Api}.execute-api.${AWS::Region}.amazonaws.com/Prod/notifyguest"
+            - { Api: !Ref NotificationResponseApi }
+
 Parameters: 
   SumerianMessageQueueFIFO:
     Type: String
@@ -35,7 +46,6 @@ Resources:
       Environment:
         Variables:
           QueueUrl: !Ref SumerianMessageQueueFIFO
-          EmployeeTable: !Ref EmployeeTable
       Layers:
           - !Ref WorkflowManagerToolKit
 
@@ -101,9 +111,9 @@ Resources:
       Timeout: 15
       Role: !Ref WorkflowFunctionsExecutionRole
       CodeUri: ./workflow-lambda
-      Environment:
-        Variables:
-          AppointmentTable: !Ref AppointmentTable
+      # Environment:
+      #   Variables:
+      #     AppointmentTable: !Ref AppointmentTable
       Layers:
           - !Ref WorkflowManagerToolKit
 
@@ -239,38 +249,53 @@ Resources:
         WriteCapacityUnits: "1"
       TableName: "WorkFlowSessionTable"
   
-  AppointmentTable:
+  # AppointmentTable:
+  #   Type: "AWS::DynamoDB::Table"
+  #   Properties:
+  #     AttributeDefinitions:
+  #       -
+  #         AttributeName: "VisitorId"
+  #         AttributeType: "S"
+  #     KeySchema:
+  #       -
+  #         AttributeName: "VisitorId"
+  #         KeyType: "HASH"
+  #     ProvisionedThroughput:
+  #       ReadCapacityUnits: "1"
+  #       WriteCapacityUnits: "1"
+  #     TableName: "WorkFlowAppointmentTable"
+
+  # EmployeeTable:
+  #   Type: "AWS::DynamoDB::Table"
+  #   Properties:
+  #     AttributeDefinitions:
+  #       -
+  #         AttributeName: "EmployeeId"
+  #         AttributeType: "S"
+  #     KeySchema:
+  #       -
+  #         AttributeName: "EmployeeId"
+  #         KeyType: "HASH"
+  #     ProvisionedThroughput:
+  #       ReadCapacityUnits: "1"
+  #       WriteCapacityUnits: "1"
+  #     TableName: "WorkFlowEmployeeTable"
+
+  VisitorTable:
     Type: "AWS::DynamoDB::Table"
     Properties:
       AttributeDefinitions:
         -
-          AttributeName: "GuestId"
+          AttributeName: "VisitorId"
           AttributeType: "S"
       KeySchema:
         -
-          AttributeName: "GuestId"
+          AttributeName: "VisitorId"
           KeyType: "HASH"
       ProvisionedThroughput:
         ReadCapacityUnits: "1"
         WriteCapacityUnits: "1"
-      TableName: "WorkFlowAppointmentTable"
-
-  EmployeeTable:
-    Type: "AWS::DynamoDB::Table"
-    Properties:
-      AttributeDefinitions:
-        -
-          AttributeName: "EmployeeId"
-          AttributeType: "S"
-      KeySchema:
-        -
-          AttributeName: "EmployeeId"
-          KeyType: "HASH"
-      ProvisionedThroughput:
-        ReadCapacityUnits: "1"
-        WriteCapacityUnits: "1"
-      TableName: "WorkFlowEmployeeTable"
-
+      TableName: "VisitorTable"
 
   #############################################
   # StepFunction Resources to manage Sessions #
