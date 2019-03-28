@@ -1,0 +1,106 @@
+/* General settings */
+
+.photo{
+    float: left;
+    width: 350px;
+    max-height: 580px;
+    border-radius: 30px;
+    border: 5px solid #555;
+    margin-right: 50px;
+}
+
+.ROTATE_90, .ROTATE_270 {
+  margin-top: 50px;
+  margin-bottom: 50px;
+}
+
+.ROTATE_90 {
+  transform: rotate(90deg);
+}
+.ROTATE_270 {
+  transform: rotate(270deg);
+}
+.ROTATE_180 {
+  transform: rotate(180deg);
+}
+
+body {
+  font-family: sans-serif;
+}
+
+mark {
+  background-color: white; /* Ignore SSML tag */
+}
+
+#screen {
+  padding: 50px; /* Adding padding for screen */
+}
+
+.cam {
+  width: 100%;
+}
+
+.visitor, .message {
+  font-size: 50px;
+  margin-bottom: 1em;
+}
+
+.logo {
+  width: 100%;
+  height: 100%;
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: contain;
+  background-attachment: scroll;
+}
+
+/* Custom QR Codes (link: http://bit.ly/techshift-vc) (https://www.qrcode-monkey.com/) */
+
+body .qrcode {
+  width: 100%;
+  height: 100%;
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: contain;
+  background-attachment: scroll;
+  background-image: url(../images/qr-code-sumerian.png);
+}
+
+body.light .qrcode {
+  background-image: url(../images/qr-code-light.png);
+}
+
+body.dark .qrcode {
+  background-image: url(../images/qr-code-dark.png);
+}
+
+/* Custom logo Images */
+
+body .logo {
+  background-image: url(../images/aws-sumerian.jpg);
+}
+
+body.light .logo {
+  background-image: url(../images/aws-light.png);
+}
+
+body.dark .logo {
+  background-image: url(../images/aws-dark.jpg);
+}
+
+body.techshift .logo {
+  background-image: url(../images/tech-shift-logo.png);
+}
+
+body.techshift-anz .logo {
+  background-image: url(../images/techshift_anz.jpg);
+}
+
+body.visy .logo {
+  background-image: url(../images/visy_logo.jpg);
+}
+
+body.mygov .logo {
+  background-image: url(../images/mygov.jpg);
+  background-size: cover;
+}

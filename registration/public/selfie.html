@@ -1,0 +1,395 @@
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+    <style>
+        body {
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+        }
+
+        .form{
+          width: 360px;
+          -height: 245px;
+          background: #edeff1;
+          margin: 0px auto;
+          padding-top: 20px;
+          border-radius: 10px;
+          -moz-border-radius: 10px;
+          -webkit-border-radius: 10px;
+        }
+
+        input[type="text"]{
+          display: block;
+          width: 270px;
+          height: 35px;
+          margin: 15px auto;
+          background: #fff;
+          border: 0px;
+          padding: 5px;
+          font-size: 16px;
+          border: 2px solid #fff;
+          transition: all 0.3s ease;
+          border-radius: 5px;
+          -moz-border-radius: 5px;
+          -webkit-border-radius: 5px;
+        }
+
+        input[type="text"]:focus{
+          border: 2px solid #1abc9d
+        }
+
+        label.cameraButton {
+            display: inline-block;
+            width: 260px;
+            height: 25px;
+            margin: 15px 0px 35px 0px;
+            text-align: center;
+            font-size: x-large;
+
+            /* Styles to make it look like a button */
+            padding: 0.5em;
+            border: 2px solid #666;
+            border-color: #EEE #CCC #CCC #EEE;
+            background-color: #DDD;
+            border-radius: 10px;
+        }
+
+        /* Look like a clicked/depressed button */
+        label.cameraButton:active {
+            border-color: #CCC #EEE #EEE #CCC;
+        }
+
+        /* This is the part that actually hides the 'Choose file' text box for camera inputs */
+        label.cameraButton input[accept*="camera"] {
+            display: none;
+        }
+
+        div.details {
+            padding: 10px 10px 10px 10px;
+        }
+
+        .photo{
+            max-height: 150px;
+            border-radius: 15px;
+            border: 2px solid #ddd;
+        }
+
+        /* Need to add extra padding when rotating from portait to landscape */
+        .ROTATE_90 {
+          transform: rotate(90deg);
+          margin-top: 20px;
+          margin-bottom: 20px;
+        }
+        .ROTATE_270 {
+          transform: rotate(270deg);
+          margin-top: 20px;
+          margin-bottom: 20px;
+        }
+        .ROTATE_180 {
+          transform: rotate(180deg);
+        }
+
+        .detailsList{
+            font-family: monospace;
+
+        }
+        .listHeader{
+            font-weight: bold;
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+        }
+
+
+
+        /*. spinner */
+    @keyframes spinner {
+  to {transform: rotate(360deg);}
+}
+
+.spinner:before {
+  content: '';
+  box-sizing: border-box;
+  position: absolute;
+  top: 30%;
+  left: 45%;
+  width: 70px;
+  height: 70px;
+  margin-top: -10px;
+  margin-left: -10px;
+  border-radius: 50%;
+  border: 4px solid transparent;
+  border-top-color: #2369a5;
+  border-bottom-color: #2369a5;
+  animation: spinner .8s ease infinite;
+}
+
+    </style>
+
+
+    <script src="https://sdk.amazonaws.com/js/aws-sdk-2.49.0.min.js" type="text/javascript"></script>
+    <script type="text/javascript" src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
+
+    <!-- Auto complete name -->
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+    <script type="text/javascript" src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+
+    <!-- Font Awesome -->
+    <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
+
+    <link href="https://afeld.github.io/emoji-css/emoji.css" rel="stylesheet">
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1">
+
+    <title>Virtual Concierge Selfie</title>
+
+    <script type="text/javascript">
+
+
+        var IdentityPoolId = ">>IDENTITY_POOL_ID<<";
+        var Region = ">>REGION<<";
+
+        IdentityPoolId = "ap-southeast-2:159dfd6b-de21-4eaa-b079-8eebd1bb434a";
+        Region = "ap-southeast-2";
+        ThingName = "deeplens_zz8BbGbNSVuHCsyqtWOM4Q";
+
+        AWS.config.region = Region;
+        AWS.config.credentials = new AWS.CognitoIdentityCredentials({
+            IdentityPoolId: IdentityPoolId
+        });
+
+        AWS.config.credentials.get(function (err) {
+            if(err) {
+                console.log(err);
+            } else {
+                console.log("updated aws config with web identity federation:\n", AWS.config.credentials);
+                AWS.config.identityId = AWS.config.credentials.identityId;
+                console.log("identityId:", AWS.config.identityId);
+            }
+        });
+
+
+        function readURL(input) {
+            if (input.files && input.files[0]) {
+                var reader = new FileReader();
+
+                reader.onloadend = function (e) {
+                    $('#analyzing').show();
+                    $("#details").hide();
+                    $("#details").empty();
+
+                    var img = document.createElement("img");
+                    img.src = e.target.result;
+
+                    img.onload = function(i) {
+                        $('#picture').fadeTo( "fast" , 0.5)
+
+                        var canvas = document.createElement("canvas");
+                        var ctx = canvas.getContext("2d");
+                        ctx.drawImage(img, 0, 0);
+
+                        var MAX_WIDTH = 800;
+                        var MAX_HEIGHT = 600;
+                        var width = img.width;
+                        var height = img.height;
+
+                        if (width > height) {
+                            if (width > MAX_WIDTH) {
+                                height *= MAX_WIDTH / width;
+                                width = MAX_WIDTH;
+                            }
+                        } else {
+                            if (height > MAX_HEIGHT) {
+                                width *= MAX_HEIGHT / height;
+                                height = MAX_HEIGHT;
+                            }
+                        }
+
+                        canvas.width = width;
+                        canvas.height = height;
+                        ctx.drawImage(img, 0, 0, width, height);
+
+                        var dataUrl = canvas.toDataURL("image/jpeg", 0.8);
+                        var binImage = getBinary(dataUrl);
+                        $('#imgPhoto').attr('src', dataUrl);
+
+                        var rekognition = new AWS.Rekognition();
+                        var params = {
+                            Image: {
+                                Bytes: binImage
+                            },
+                            MinConfidence: 70
+                        };
+                        rekognition.detectLabels(params, function (err, data) {
+                            if (err) {
+                                console.log(err, err.stack);
+                                return
+                            }
+
+                            var details = data.Labels;
+                            if(details.length === 0) {
+                                displayDetails(false);
+                                return;
+                            }
+
+                            var includesSelfie = false;
+                            for(var i = 0; i < details.length; i++) {
+                                if(details[i].Name === "Selfie" || details[i].Name === "Person") {
+                                    includesSelfie = true;
+                                }
+                            }
+
+                            if (!includesSelfie) {
+                              displayDetails(false);
+                              return;
+                            }
+
+                            var params = {
+                                Image: {
+                                    Bytes: binImage
+                                },
+                                Attributes: ["ALL"]
+                            };
+
+                            rekognition.detectFaces(params, function (err, data) {
+                                if (err) {
+                                    console.log(err, err.stack);
+                                    displayDetails(false);
+                                    return
+                                }
+                                try{
+                                    // Rotate image to reflect orientation
+                                    var rotate = data['OrientationCorrection']
+                                    $('#imgPhoto').attr('class', 'photo ' + rotate);
+
+                                    var details = data.FaceDetails[0];
+                                    var personData = [];
+                                    personData.push("Age Range: " + details.AgeRange.Low + " - " + details.AgeRange.High );
+                                    personData.push("Beard: " + details.Beard.Value );
+                                    personData.push("Eyeglasses: " + details.Eyeglasses.Value );
+                                    personData.push("Gender: " + details.Gender.Value );
+                                    personData.push("Smile: " + details.Smile.Value );
+                                    displayDetails(personData);
+
+                                    // Upload the image as a frame to simulate deep lens
+                                    var payload = {
+                                      Bucket: 'virtual-concierge-frame-ap-southeast-2',
+                                      Key: `faces/selfie/${new Date().getTime()}.jpg`,
+                                      Body: binImage,
+                                      Metadata: {
+                                        'ThingName': ThingName,
+                                        'BoundingBox': JSON.stringify(details['BoundingBox']),
+                                        'OrientationCorrection': rotate
+                                      },
+                                      ACL: 'public-read'
+                                    }
+                                    uploadImageToS3(payload)
+                                    console.log('uploaded', payload.Bucket, payload.Key)
+                                }
+                                catch(e){
+                                    displayDetails(false);
+                                }
+                            });
+                        });
+
+                        $('#imgPhoto').attr('hidden', false);
+                    };
+
+                };
+
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        $("document").ready(function() {
+
+            $("#inpObject").on("change", function () {
+                readURL(this);
+            });
+
+        });
+
+        function displayDetails(personData){
+            $('#picture').fadeTo( "fast" , 1.0)
+            $("#analyzing").hide();
+            $("#details").show();
+
+            if(personData){
+              $("#details").html("");
+              $("#details").append("<div style='height:150px; overflow: auto' id='personDetails' class='detailsList'><div class='listHeader'>Person Details:</div></div>");
+              displayAnimated($("#personDetails"), personData, 0, 0);
+            }
+            else{
+              $("#details").html("<div style='font-weight: bold'>No recognizable items found.</div>");
+            }
+        }
+
+        function displayAnimated(divObj, stringList, currWordIndex, currIndex){
+            var currWord = stringList[currWordIndex];
+            if(currIndex >= currWord.length){
+                currIndex = 0;
+                currWordIndex += 1;
+                if(currWordIndex >= stringList.length){
+                    return;
+                }
+                currWord = stringList[currWordIndex];
+            }
+            if(currIndex == 0 && currWordIndex > 0){
+                divObj.append("<br>")
+            }
+            divObj.append(currWord.charAt(currIndex))
+            setTimeout(function(){
+                displayAnimated(divObj, stringList, currWordIndex, currIndex+1)
+            }, 20);
+        }
+
+        function uploadImageToS3(payload){
+
+            var s3 = new AWS.S3();
+            s3.putObject(payload, function(err, data) {
+              if (err) console.log(err, err.stack); // an error occurred
+              else     console.log(data);           // successful response
+            });
+        }
+
+        function getBinary(encodedFile) {
+            var base64Image = encodedFile.split("data:image/jpeg;base64,")[1];
+            var binaryImg = atob(base64Image);
+            var length = binaryImg.length;
+            var ab = new ArrayBuffer(length);
+            var ua = new Uint8Array(ab);
+            for (var i = 0; i < length; i++) {
+                ua[i] = binaryImg.charCodeAt(i);
+            }
+
+            var blob = new Blob([ab], {
+                type: "image/jpeg"
+            });
+
+            return ab;
+        }
+
+
+    </script>
+
+</head>
+<body>
+    <center>
+        <div class="form">
+          <h2>Virtual Concierge <i class="em em-selfie"></i></h2>
+          <label class="cameraButton">
+              <span><i class="fa fa-camera"></i>&nbsp;&nbsp;Take a Photo</span>
+              <input hidden type="file" id="inpObject" accept="image/*" capture>
+          </label>
+        </div>
+        <div id="picture" >
+            <br />
+            <img id="imgPhoto" src="#" class="photo" hidden  />
+            <br/>
+        </div>
+        <div id="analyzing" hidden ><div class="spinner"></div></div>
+        <div id="details"  class="details" hidden></div>
+    </center>
+</body>
+</html>

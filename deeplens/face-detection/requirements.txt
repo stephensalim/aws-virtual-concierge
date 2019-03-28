@@ -1,0 +1,4 @@
+numpy
+mxnet
+opencv-python
+boto3

@@ -1,0 +1,59 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Inputs:
+    SlackWebHook:
+      Description: "The Webhook for the"
+      Value: "https://hooks.slack.com/services/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"
+    SlackChannel:
+      Description: "The channel to publis too"
+      Value: "#general"
+Outputs:
+    SlackApi:
+      Description: "Slack API Gateway endpoint URL for Prod stage"
+      Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
+Resources:
+  # No simple way of create SPA, so use static bucket for now that posts to register API
+  # see: https://github.com/awslabs/serverless-application-model/issues/270#issuecomment-418928864
+  SlackAPI:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Description: Slack API
+      Runtime: python3.6
+      CodeUri: ./sessionhandler-lambda
+      Handler: slackcallback.lambda_handler
+      Role: !GetAtt ExecutionRole.Arn
+      Environment:
+        Variables:
+          SLACK_TOPIC_ARN: !Ref SlackTopic
+          SLACK_SIGNING_SECRET: "1155e22f70c2f20f081775ef0428bdc8"
+      Events:
+        SlackAPI:
+            Type: Api
+            Properties:
+                Path: /callback
+                Method: ANY
+  SlackTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: "Slack API callback"
+      TopicName: "virtual-concierge-slack"
+      Subscription:
+        -
+          Endpoint: !GetAtt sessionmanager.Arn
+          Protocol: "lambda"
+
+  # TODO: Raise an SNS for when we want to notify host, and then subscribe with Slack/Email and have seperate callabck
+  triggerslack:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: slackmessager.lambda_handler
+      Runtime: python2.7
+      Description: 'Trigger Slack API to notify guest arrival'
+      MemorySize: 1536
+      Timeout: 15
+      Role: !GetAtt ExecutionRole.Arn
+      CodeUri: ./sessionhandler-lambda
+      Environment:
+        Variables:
+          SlackWebHook: !Ref SlackWebHook
+          SlackChannel: !Ref SlackChannel

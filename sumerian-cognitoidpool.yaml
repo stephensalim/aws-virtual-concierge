@@ -1,0 +1,45 @@
+AWSTemplateFormatVersion : 2010-09-09
+Description: Creates a Cognito Pool for use in Amazon Sumerian Speech Component Tutorial
+Outputs:
+  CognitoIdentityPoolID:
+    Description: The Cognito Identity Pool ID. Place this in the AWS settings of your Amazon Sumerian Scene
+    Value:
+      Ref: CognitoIdentityPool
+Resources:
+    CognitoIdentityPool:
+        Type: AWS::Cognito::IdentityPool
+        Properties:
+          IdentityPoolName:
+            Fn::Sub: "SumerianCognitoIdentityPool"
+          AllowUnauthenticatedIdentities: True
+    CognitoIdentityExampleRole:
+        Type: AWS::IAM::Role
+        Properties:
+          AssumeRolePolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Action: sts:AssumeRoleWithWebIdentity
+              Effect: Allow
+              Principal:
+                Federated: 'cognito-identity.amazonaws.com'
+              Condition:
+                StringEquals:
+                  cognito-identity.amazonaws.com:aud:
+                    Ref: CognitoIdentityPool
+          ManagedPolicyArns:
+          - arn:aws:iam::aws:policy/AmazonPollyFullAccess
+          - arn:aws:iam::aws:policy/AmazonLexFullAccess
+          - arn:aws:iam::aws:policy/AmazonSQSFullAccess
+          - arn:aws:iam::aws:policy/AWSIoTFullAccess
+          - arn:aws:iam::aws:policy/AmazonSNSFullAccess
+          - arn:aws:iam::aws:policy/AmazonS3FullAccess
+          - arn:aws:iam::aws:policy/AmazonRekognitionFullAccess
+          - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
+    CognitoRoleAttachment:
+      Type: "AWS::Cognito::IdentityPoolRoleAttachment"
+      Properties:
+        IdentityPoolId:
+          Ref: CognitoIdentityPool
+        Roles:
+          unauthenticated:
+            Fn::GetAtt: [CognitoIdentityExampleRole, Arn]

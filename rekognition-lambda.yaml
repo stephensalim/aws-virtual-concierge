@@ -1,0 +1,136 @@
+﻿AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: Rekognition face detection logic
+Resources:
+Transform: 'AWS::Serverless-2016-10-31'
+Outputs:
+    RegisterApi:
+      Description: "API Gateway endpoint URL for Prod stage for API Gateway"
+      Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
+Globals:
+  #https://github.com/awslabs/serverless-application-model/blob/develop/docs/globals.rst
+  Function:
+    Runtime: python3.7
+    MemorySize: 128
+    Timeout: 3
+    Environment:
+      # TODO: Add resource to create rekognition collection
+      Variables:
+        FACE_COLLECTON: "virtual-concierge"
+        FACE_DDB_TABLE: !Ref IndexTable
+        FACE_TOPIC_ARN: !Ref FaceTopic
+        FACE_THRESHOLD: 80
+        FACE_URL_TTL: 3600
+        FACE_ROTATE: ROTATE_0
+Resources:
+  # TODO: Create a static website elements
+  # see: https://github.com/aws-samples/aws-reinvent-2018-trivia-game/blob/master/static-site/cdk/static-site.ts
+  # No simple way of create SPA, so use static bucket for now that posts to register API
+  # see: https://github.com/awslabs/serverless-application-model/issues/270#issuecomment-418928864
+  RegisterFunction:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      CodeUri: ./rekognition-lambda
+      Handler: register_api.lambda_handler
+      Description: Reigister API to create Rekognition entry, and save to S3
+      Role:
+        Fn::GetAtt:
+        - RekognizeLambdaIAMRole
+        - Arn
+      Timeout: 30
+      Environment:
+        Variables:
+          INDEX_BUCKET: !Ref IndexBucket
+          INDEX_PATH: "index"
+          CLASSIFY_URL: "http://13.239.111.108/classify" # TODO: Provision ALB with ECS
+      Events:
+        RegisterAPI:
+            Type: Api
+            Properties:
+                Path: /register
+                Method: ANY # Can we just restrict to OPTIONS/POST?
+        HostAPI:
+            Type: Api
+            Properties:
+                Path: /hosts
+                Method: GET
+  detectFaces:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: detect_faces.lambda_handler
+      Runtime: python3.7
+      CodeUri: ./rekognition-lambda
+      Description: An Amazon S3 trigger that uses rekognition APIs to detect faces
+      MemorySize: 128
+      Timeout: 30
+      Role: !GetAtt RekognizeLambdaIAMRole.Arn
+      Events:
+        BucketObjectCreated:
+          Type: S3
+          Properties:
+            Bucket:
+              Ref: FrameBucket
+            Events:
+              - 's3:ObjectCreated:*'
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: prefix
+                    Value: faces/
+                  - Name: suffix
+                    Value: jpg
+      Tags:
+        'lambda-console:blueprint': rekognition-python
+  FrameBucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      AccessControl: 'BucketOwnerFullControl'
+      BucketName: 'virtual-concierge-frames-ap-southeast-2'
+  IndexBucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      AccessControl: 'BucketOwnerFullControl'
+      BucketName: 'virtual-concierge-index-ap-southeast-2'
+  IndexTable:
+    Type: "AWS::DynamoDB::Table"
+    Properties:
+      AttributeDefinitions:
+        -
+          AttributeName: "FaceId"
+          AttributeType: "S"
+      KeySchema:
+        -
+          AttributeName: "FaceId"
+          KeyType: "HASH"
+      ProvisionedThroughput:
+        ReadCapacityUnits: "1"
+        WriteCapacityUnits: "1"
+      TableName: "virtual-concierge-face"
+  FaceTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: "Recognized Face"
+      TopicName: "virtual-concierge-face"
+  RekognizeLambdaIAMRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: "/"
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/AmazonRekognitionFullAccess
+      - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
+      - arn:aws:iam::aws:policy/AmazonS3FullAccess
+      - arn:aws:iam::aws:policy/CloudWatchLogsFullAccess
+      - arn:aws:iam::aws:policy/CloudWatchFullAccess
+      - arn:aws:iam::aws:policy/AmazonSNSFullAccess
+      - arn:aws:iam::aws:policy/AWSLambdaExecute
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaRole
+      RoleName: 'virtual-concierge-lambdarekognitionrole'
