@@ -19,10 +19,10 @@ sqsclient = boto3.client('sqs')
 snsclient = boto3.client('sns')
 sfnclient = boto3.client('stepfunctions')
 
-def start_workflow_execution(sfnexecid,event):
+def start_workflow_execution(sfnexecid,sfrnarn,event):
     try:
         response = sfnclient.start_execution(
-            stateMachineArn='arn:aws:states:ap-southeast-2:882607831196:stateMachine:ReceptionWorkflow',
+            stateMachineArn=sfrnarn,
             name= sfnexecid,
             input= json.dumps(event)
         )
@@ -168,25 +168,25 @@ def find_nearest_date(items, pivot):
         print("Exception finding nearst date")
         raise e
 
-def find_nearst_scheduled_appointment(guestid,appointmenttable):
-    try:
-        logger.debug('event.'+ os.environ['AWS_LAMBDA_FUNCTION_NAME'] + '.find_nearst_scheduled_appointment.trigger={}'.format(json.dumps(guestid)))
-        getitemresponse = appointmenttable.get_item(Key={'GuestId': str(guestid)}, AttributesToGet=['Appointments'])
-        if 'Item' in getitemresponse:
-            appointments = getitemresponse['Item']['Appointments']
-            datearray = []
-            for dateval in appointments:
-                datearray.append(Decimal(dateval['DateTime']))
-            index = find_nearest_date(datearray,datetime.datetime.now().timestamp())
-            result = appointments[index]
-        else:
-            result = None
-        logger.debug('event.'+ os.environ['AWS_LAMBDA_FUNCTION_NAME'] + '.find_nearst_scheduled_appointment.result={}'.format(json.dumps(result)))
-        return result
-    except Exception as e:
-        print(e)
-        print("Exception error while finding nearst appointments appointments")
-        raise e
+# def find_nearst_scheduled_appointment(guestid,appointmenttable):
+#     try:
+#         logger.debug('event.'+ os.environ['AWS_LAMBDA_FUNCTION_NAME'] + '.find_nearst_scheduled_appointment.trigger={}'.format(json.dumps(guestid)))
+#         getitemresponse = appointmenttable.get_item(Key={'GuestId': str(guestid)}, AttributesToGet=['Appointments'])
+#         if 'Item' in getitemresponse:
+#             appointments = getitemresponse['Item']['Appointments']
+#             datearray = []
+#             for dateval in appointments:
+#                 datearray.append(Decimal(dateval['DateTime']))
+#             index = find_nearest_date(datearray,datetime.datetime.now().timestamp())
+#             result = appointments[index]
+#         else:
+#             result = None
+#         logger.debug('event.'+ os.environ['AWS_LAMBDA_FUNCTION_NAME'] + '.find_nearst_scheduled_appointment.result={}'.format(json.dumps(result)))
+#         return result
+#     except Exception as e:
+#         print(e)
+#         print("Exception error while finding nearst appointments appointments")
+#         raise e
 
 def send_activitiy_success(token,res):
     try:

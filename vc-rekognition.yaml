@@ -1,0 +1,125 @@
+AWSTemplateFormatVersion : 2010-09-09
+Description: Creates the S3 bucket that will be used to store all the codes for our worklow.
+
+Parameters: 
+  YourFullName: 
+    Type: String
+    Description: Please enter your full name without space in lower case, this will be added as prefix to your bucket name
+
+Outputs:
+  FaceBucket:
+    Description: The S3 Bucket Containing people Mug Face.
+    Value: !Ref FaceBucket
+
+  FaceCollectionId:
+    Description: Your Recognition Face CollectionId
+    Value: !GetAtt FaceCollectionCustom.CollectionId
+
+Resources:
+    FaceBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: 
+            !Sub 
+              - '${YourFullName}-facebucket-${AWS::Region}-${AWS::AccountId}'
+              - { YourFullName: !Ref YourFullName }
+        AccessControl: PublicReadWrite
+        CorsConfiguration:
+          CorsRules:
+          - AllowedHeaders: ['*']
+            AllowedMethods: [GET,PUT,POST,DELETE]
+            AllowedOrigins: ['*']
+            Id: myCORSRuleId1
+            MaxAge: '3600'
+            ExposedHeaders: [x-amz-server-side-encryption, x-amz-request-id, x-amz-id-2]
+
+    CustomResourceExecutionRole:
+      Type: "AWS::IAM::Role"
+      Properties:
+          AssumeRolePolicyDocument:
+            Statement:
+              -
+                Effect: "Allow"
+                Principal:
+                  Service:
+                    - "lambda.amazonaws.com"
+                    -
+                      Fn::Join:
+                        - ""
+                        - - "states."
+                          -
+                            Ref: "AWS::Region"
+                          - ".amazonaws.com"
+                Action:
+                  - "sts:AssumeRole"
+          Path: "/"
+          Policies:
+            -
+              PolicyName: "Policies"
+              PolicyDocument:
+                Statement:
+                  -
+                    Effect: "Allow"
+                    Action: "*"
+                    Resource: "*"
+    FaceCollectionCustom:
+      Type: Custom::FaceCollectionCustom
+      Version: 1.0
+      Properties:
+        ServiceToken: !GetAtt FaceCollection.Arn
+        CollectionId: 
+            !Sub 
+              - '${YourFullName}-collectionId-${AWS::Region}-${AWS::AccountId}'
+              - { YourFullName: !Ref YourFullName }
+    FaceCollection:
+        Type: "AWS::Lambda::Function"
+        Properties:
+          Handler: index.lambda_handler
+          Role: !GetAtt CustomResourceExecutionRole.Arn
+          Runtime: python3.6
+          Timeout: 120
+          Code:
+            ZipFile: |
+              import boto3
+              import cfnresponse
+
+              def lambda_handler(event, context):
+                  try:
+                      if event['RequestType'] == 'Delete':
+                      
+                        collectionId=event['ResourceProperties']['CollectionId']
+                        print('Attempting to delete collection ' + collectionId)
+                        client=boto3.client('rekognition')
+                        statusCode=''
+                        try:
+                            response=client.delete_collection(CollectionId=collectionId)
+                            statusCode=response['StatusCode']
+                        except ClientError as e:
+                            if e.response['Error']['Code'] == 'ResourceNotFoundException':
+                                print ('The collection ' + collectionId + ' was not found ')
+                            else:
+                                print ('Error other than Not Found occurred: ' + e.response['Error']['Message'])
+                            statusCode=e.response['ResponseMetadata']['HTTPStatusCode']
+                        print('Operation returned Status Code: ' + str(statusCode))
+                        print('Done...')
+                        responseData = {'Delete': 'SUCCESS'}
+                        cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData)
+                      else:
+                      
+                        maxResults=1
+                        collectionId = event['ResourceProperties']['CollectionId']
+                        client=boto3.client('rekognition')
+                      
+                        #Create a collection
+                        print('Creating collection:' + collectionId)
+                        response=client.create_collection(CollectionId=collectionId)
+                        print('Collection ARN: ' + response['CollectionArn'])
+                        print('Status code: ' + str(response['StatusCode']))
+                        print('Done...')
+                        
+                        coll = response['CollectionArn'].split("/")
+                        responseData = {'CollectionId': coll[1]}
+                        cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData)
+                  except Exception as e:
+                      responseData = {'Error': str(e)}
+                      cfnresponse.send(event, context, cfnresponse.FAILED, responseData)

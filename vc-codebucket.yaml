@@ -19,3 +19,4 @@ Resources:
             !Sub 
               - '${YourFullName}-workflowcodebucket-${AWS::Region}-${AWS::AccountId}'
               - { YourFullName: !Ref YourFullName }
+

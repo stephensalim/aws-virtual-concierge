@@ -7,7 +7,7 @@ import smtoolkit as vcsm
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
-sessiontable = os.environ['sessiontable']
+sessiontable = os.environ['SessionTable']
 
 def lambda_handler(event, context):
     try:

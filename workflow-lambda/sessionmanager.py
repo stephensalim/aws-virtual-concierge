@@ -12,7 +12,8 @@ logger.setLevel(logging.DEBUG)
 def process_payload(facerec):
     try:
         logger.debug('event.'+ os.environ['AWS_LAMBDA_FUNCTION_NAME'] + '.process_payload.trigger={}'.format(json.dumps(facerec)))
-        tablename = os.environ['sessiontable']
+        tablename = os.environ['SessionTable']
+        sfnarn = os.environ['WorkFlowArn']
         visitorid = facerec['Visitor']['FaceId']
         searchresult = vcsm.find_session(visitorid,tablename)
         print(searchresult)
@@ -28,7 +29,7 @@ def process_payload(facerec):
         else:
             sfnexecid = "vc-session-" + str(uuid.uuid4())
             facerec['SessionId'] = sfnexecid
-            vcsm.start_workflow_execution(sfnexecid,facerec)
+            vcsm.start_workflow_execution(sfnexecid,sfnarn,facerec)
 
     except Exception as e:
         print(e)
@@ -37,9 +38,10 @@ def process_payload(facerec):
 
 def process_blankpayload(facerec):
     try:
+        sfnarn = os.environ['WorkFlowArn']
         logger.debug('event.'+ os.environ['AWS_LAMBDA_FUNCTION_NAME'] + '.process_blankpayload.trigger={}'.format(json.dumps(facerec)))
         sfnexecid = "blank-vc-session-" + str(uuid.uuid4())
-        vcsm.start_workflow_execution(sfnexecid,facerec)
+        vcsm.start_workflow_execution(sfnexecid,sfnarn,facerec)
 
     except Exception as e:
         print(e)

@@ -8,11 +8,11 @@ Outputs:
     
   WorkflowNotificationSNSTopic:
     Description: SNS Topic to send notification from Workflow
-    Value: !GetAtt WorkflowNotificationSNSTopic.TopicName
+    Value: !Ref WorkflowNotificationSNSTopic
     
   SessionManagerSNSTopic:
     Description: SNS topic responsible to send Face informatin to SessionManager Function
-    Value: !GetAtt SessionManagerSNSTopic.TopicName
+    Value: !Ref SessionManagerSNSTopic
     
 Resources:
 

@@ -8,7 +8,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
 dynamodb = boto3.resource('dynamodb')
-appointmenttable = dynamodb.Table(os.environ['appointmenttable'])
+
 
 def lambda_handler(event, context):
     
@@ -17,7 +17,14 @@ def lambda_handler(event, context):
         guestid = event['Visitor']['FaceId']
         result = event
         result['Appointment'] = {}
-        result['Appointment'] = vcsm.find_nearst_scheduled_appointment(guestid,appointmenttable)
+        
+        ##############
+        # Demo Code - This section should ber where the function Search for appointment and return Hostname
+        #############
+        result['Appointment']['HostName'] = "Stephen Salim"
+        result['Appointment']['Room'] = "BruceLee"
+        result['Appointment']['Found'] = "True"
+        
         if result['Appointment'] is not None:
             result['Appointment']['Found'] = "True"            
         else:

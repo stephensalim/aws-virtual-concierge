@@ -67,7 +67,7 @@ def lambda_handler(event, context):
                 
             if event['SumerianMessageType'] == "NotifyHost":
                 if 'Appointment' in previousoutput:
-                    hostfullname = vcsm.find_employee_name(previousoutput['Appointment']['EmployeeId'])
+                    hostfullname = previousoutput['Appointment']['HostName']
                 speech = "Alright, I have found your appointment with  <mark name='gesture:generic_c'/> " + hostfullname + ". <mark name='gesture:generic_a'/> Please take a seat, while I notify your arrival."
                 mode = 'notify'
                 visitorface['Appointment'] = {}
@@ -88,18 +88,18 @@ def lambda_handler(event, context):
                 result = previousoutput
                 #result['SumerianHost'] = sendmsgrespone
             
-            if event['SumerianMessageType'] == "HostArrived":
-                if 'HostResponse' in previousoutput:
-                    if 'Appointment' in previousoutput:
-                        hostfullname = vcsm.find_employee_name(previousoutput['Appointment']['EmployeeId'])
-                        roomname = previousoutput['Appointment']['Room']
-                    if previousoutput['HostResponse'] == 'arrived':
-                        speech =  vcsm.get_name(hostfullname,'first') + "! Thank you for finally coming out. Your meeting is in room " + roomname + ". Have a nice day !!" 
-                    if previousoutput['HostResponse'] == 'cancelled':
-                        speech = "No worries " +  vcsm.get_name(hostfullname,'first') + "! I'll cancel the meeting and free up the room. Have a great day !"
-                mode = 'arrive'
-                sendmsgrespone = vcsm.send_sumerian_message(visitorface,mode,speech,sqs_queue)
-                result = previousoutput
+            # if event['SumerianMessageType'] == "HostArrived":
+            #     if 'HostResponse' in previousoutput:
+            #         if 'Appointment' in previousoutput:
+            #             hostfullname = previousoutput['Appointment']['HostName']
+            #             roomname = previousoutput['Appointment']['Room']
+            #         if previousoutput['HostResponse'] == 'arrived':
+            #             speech =  vcsm.get_name(hostfullname,'first') + "! Thank you for finally coming out. Your meeting is in room " + roomname + ". Have a nice day !!" 
+            #         if previousoutput['HostResponse'] == 'cancelled':
+            #             speech = "No worries " +  vcsm.get_name(hostfullname,'first') + "! I'll cancel the meeting and free up the room. Have a great day !"
+            #     mode = 'arrive'
+            #     sendmsgrespone = vcsm.send_sumerian_message(visitorface,mode,speech,sqs_queue)
+            #     result = previousoutput
                 #result['SumerianHost'] = sendmsgrespone
             logger.debug('event.'+ os.environ['AWS_LAMBDA_FUNCTION_NAME'] + '.sumerianhostmessager.result={}'.format(json.dumps(result)))
             return(result)

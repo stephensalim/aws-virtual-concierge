@@ -9,14 +9,19 @@ Outputs:
 
   VisitorTable:
     Description: "The DynamoDB Containing Registered Visitor Table"
-    Value: !GetAtt VisitorTable.Arn
-    
+    Value: !Ref VisitorTable
+
+  SessionTable:
+    Description: "The DynamoDB Containing Registered Session Table"
+    Value: !Ref SessionTable
+
   NotificationAPIurl:
-    Description: "The DynamoDB Containing Registered Visitor Table"
+    Description: "Notification Url"
     Value: 
         'Fn::Sub':
             - "https://${Api}.execute-api.${AWS::Region}.amazonaws.com/Prod/notifyguest"
             - { Api: !Ref NotificationResponseApi }
+
 
 Parameters: 
   SumerianMessageQueueFIFO:
@@ -28,6 +33,7 @@ Parameters:
   WorkflowFunctionsExecutionRole:
     Type: String
     Description: "Please enter the WorkflowFunctionsExecutionRole value from Step 1"
+    
 Resources:
 
   ########################################################
@@ -98,6 +104,7 @@ Resources:
                   - "https://${Api}.execute-api.${AWS::Region}.amazonaws.com/Prod/notifyguest"
                   - { Api: !Ref NotificationResponseApi }
           SessionTable: !Ref SessionTable
+          WorkFlowArn: !Ref WorkFlowStateMachine
       Layers:
           - !Ref WorkflowManagerToolKit
 
@@ -111,9 +118,6 @@ Resources:
       Timeout: 15
       Role: !Ref WorkflowFunctionsExecutionRole
       CodeUri: ./workflow-lambda
-      # Environment:
-      #   Variables:
-      #     AppointmentTable: !Ref AppointmentTable
       Layers:
           - !Ref WorkflowManagerToolKit
 
@@ -133,10 +137,7 @@ Resources:
             'Fn::Sub':
                   - "https://${Api}.execute-api.${AWS::Region}.amazonaws.com/Prod/notifyguest"
                   - { Api: !Ref NotificationResponseApi }
-          SNSTopic: 
-            'Fn::Sub':
-                  - "arn:aws:sns:${AWS::Region}:${AWS::AccountId}:${SNS}"
-                  - { SNS: !Ref WorkflowNotificationSNSTopic }
+          SNSTopic: !Ref WorkflowNotificationSNSTopic
           ActivityHostResponseArn: !Ref ActivityHostResponse
           ActivityHostArrivalArn: !Ref ActivityHostArrival
           SessionTable: !Ref SessionTable
@@ -295,7 +296,7 @@ Resources:
       ProvisionedThroughput:
         ReadCapacityUnits: "1"
         WriteCapacityUnits: "1"
-      TableName: "VisitorTable"
+      TableName: "WorkFlowVisitorTable"
 
   #############################################
   # StepFunction Resources to manage Sessions #
@@ -454,40 +455,6 @@ Resources:
                         			"Next": "Send notification to host"
                         		}, 		
                         		"[ Sumerian ] Notify Visitor on Host Response": {
-                        			"Type": "Task",
-                        			"Resource": "${SumerianMessenger}",
-                        			"Next": "Notify Visitor and Wait"
-                        		},
-                        		"Notify Visitor and Wait": {
-                        			"Type": "Parallel",
-                        			"Next": "[Sumerian] Notify host and guest on meeting room number",
-                        			"Branches": [{
-                        					"StartAt": "[Sumerian] notify guest on host arrival",
-                        					"States": {
-                        						"[Sumerian] notify guest on host arrival": {
-                        							"Type": "Task",
-                        							"Resource": "${SendNotification}",
-                        							"Parameters" : {
-                                			  "Activity" : "HostArrival",
-                                			  "PreviousStateOutput.$" : "$"
-                                			},
-                        							"End": true
-                        						}
-                        					}
-                        				},
-                        				{
-                        					"StartAt": "ActivityJob-Wait for Host Arrival",
-                        					"States": {
-                        						"ActivityJob-Wait for Host Arrival": {
-                        							"Type": "Task",
-                        							"Resource": "${ActivityHostArrival}",
-                        							"End": true
-                        						}
-                        					}
-                        				}
-                        			]
-                        		},
-                        		"[Sumerian] Notify host and guest on meeting room number": {
                         			"Type": "Task",
                         			"Resource": "${SumerianMessenger}",
                         			"Next": "Clear Session"

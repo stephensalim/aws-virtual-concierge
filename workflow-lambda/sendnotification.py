@@ -56,7 +56,7 @@ def lambda_handler(event, context):
             msg['HostNotification']['ResponseOption']['now_response'] = now_response
             msg['HostNotification']['ResponseOption']['soon_response'] = soon_response
             
-            vcsm.update_session(event['Visitor']['FaceId'],'HostNotificationToken',token,os.environ['sessiontable'])
+            vcsm.update_session(event['Visitor']['FaceId'],'HostNotificationToken',token,os.environ['SessionTable'])
             vcsm.send_sns(json.dumps(msg),os.environ['SNSTopic'])
 
         if event['Activity'] == 'HostArrival':
@@ -69,7 +69,7 @@ def lambda_handler(event, context):
             result['HostArrival']['ArrivalOption'] = {}
             result['HostArrival']['ArrivalOption']['arrived'] = arrived
             result['HostArrival']['ArrivalOption']['cancelled'] = cancelled
-            vcsm.update_session(event['Visitor']['FaceId'],'HostArrivalToken',token,os.environ['sessiontable'])
+            vcsm.update_session(event['Visitor']['FaceId'],'HostArrivalToken',token,os.environ['SessionTable'])
         
         event.pop('Activity', None)
         result.update(event)
