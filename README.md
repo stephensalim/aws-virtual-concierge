@@ -2,8 +2,8 @@
 
 
 # **Welcome to "Building an AI Virtual Concierge" lab !**
+By : Stephen Salim | AWS Partner Solutions Architect | Email : sssalim@amazon.com
 
-Author: Stephen Salim
 
 In this lab you will be building a virtual concierge powered using [Amazon Sumerian](https://aws.amazon.com/sumerian/). We will be Levaraging AWS AI service, [Amazon Rekognition](https://aws.amazon.com/rekognition/), to allow your Sumerian to idenitfy who you are, greet you, check if you have an appointment, and notify a of your arrival.
 
@@ -206,7 +206,10 @@ This workflow will receive an input containing face information from a face dete
 	```
 
 10. Wait until the stack deployed is complete, then follow the steps below.
-	
+11. Confirm Email SNS Notification.....
+
+
+
 #### IMPORTANT
 
 The Value of resources deployed in this step will be needed to configure the sumerian scene on step 4. Rather than coming back later to this step, I recommend to follow this step now and take note of the resource values.
@@ -374,28 +377,102 @@ To find out the information about resources deployed you can look at the CloudFo
 </p>
 </details>
 
-## **Step 5 - Test the Scene.**
+## **Step Final - Test.**
 
-Now that we have completed all the configuration, let's take it for a spin.
-
-
+Once you followed Step 1 - 4 above, now it is time to see it in action.
 
 ![main_arch](./images/main_arch.png) 
 
-1. Save the scene.
-2. Publish the Scene; Click **Publish** > **Create public link**
-3. Click **Publish** wait until it's published.
-4. Once the scene is published.
-5. Copy the public link and open it on new window.
-6. Position your face into the WebCam, then click on the Camera image.
-7. If you would like to retake the picture click on X otherwise press the V image if you are ready to continue.
-8. At this point the WebCamScript will check your face against the FaceCollection you created and it will send the result to your SNS notification to trigger the workflow.
-9. Because this is the first time you are seen the Workflow should enter the state where it'll get the sumerian host to say that they do not know you and send instruction into Sumerian Scene to open the Registration face.
-10. So now Go ahead and pose for the best mug shot, click on the camera, type in your name, and click submit. 
-11. At this point RegistrationScript will register your face to the FaceCollection, upload your mug shot into the FaceCollectionS3 bucket and send the SNS notification to trigger the workflow.
-12. This time because there is a face rekognised in the workflow it will enter the state where it will look for an appointment. 
-13. When appointment is found it will send message to sumerian host to say that you have an appointment and send notification to the host. 
+<details><summary>[ CLICK HERE ] for detailed steps</summary>
+<p>
 
+1. Click on the Play Icon on the Scene.
 
+	![step4.9](./images/step4.9.png)
+
+2. Position your face into the WebCam, then click on the camera icon to take a snap picture.
+
+	![step5.2](./images/step5.2.png) 
+
+3. If you would like to retake the picture click on "cross" button otherwise press the "check" button if you are ready to continue.
+
+	![step5.3](./images/step5.3.png) 
+
+8. At this point the **WebCamScript** will check your face against the `FaceCollectionId ` you on step 2 and it will send the result to your SNS notification to trigger the workflow `SessionManagerSNSTopic `.
+
+9. This will in turn trigger the event in StepFunction specified in `WorkFlowStateMachine` value (deployed in step 3).
+
+10. (Optional) If you would like to take a look on what the flow looks like in the state machine follow below steps:
+
+	* Click Services on [AWS Console](https://us-west-2.console.aws.amazon.com/) in the Search bar type in Step Functions, select and click CloudFormation service.
+	
+		![step5.10.1](./images/step5.10.1.png)
+	 
+	* This will take you to the StepFunction Console.
+	* Locate the State Machine you've created, if you follow the steps above you should see one with `WorkFlowStateMachine-` prefix. click on the State Machine name.
+
+		![step5.10.2](./images/step5.10.2.png)
+		
+	* Locate for the latest execution and click on the ID.
+	 
+	 	![step5.10.3](./images/step5.10.3.png)
+	 	
+	* You should now see a section in the console with a flowchart looking graph. If you expand it, you should be able to see the steps that occured in the background and it should tell you a story on the scenario that has occured.
+	
+		![step5.10.4](./images/step5.10.4.png)
+	
+	* Because at the moment the `FaceCollectionId` is empty, your face are not recognised. What happened here is the workflow entered a state for unknown face and it has sent an SQS message `SumerianMessageQueueFIFO ` with instructions to show the registration page on the Sumerian scene, and for the host to say the message. 
+
+11. So you should now see the registration page hanging on your scene.
+12. Go ahead and pose for the best mug shot on the planet, click on the "camera" button, type in your name, and click submit. 
+
+	![step5.12](./images/step5.12.png)
+
+13. Once you click Submit, at this point the `RegistrationScript` in Sumerian will register your mug shot to the `FaceCollectionId`, upload your mug shot into the `FaceBucket` bucket deployed on step2. Once that's done it will then send the SNS notification `SessionManagerSNSTopic ` to trigger the workflow again.
+
+14. This time, your sumererian host should know your name, greet you and check for your appointment.
+
+15. And if you then trace back to the State machine workflow following steps described in 5.10 you should see a workflow that looks like this.
+
+	![step5.12](./images/step5.15.png)
+
+16. The flow basically enters a different path of the workflow, Lookup for appointment, send different action to Sumerian and also, sent an email to the email address you've specified when building step 4. So check your email and look for an email from the SNS Topic.
+
+**Note:**
+
+If you are wondering how does the workflow knows if you have an appointment or not. It is basically hardcoded in function that backs Lookup Appointment state `~/workflow-lambda/appointmentlookup.py`. The purpose of this lab is to showcase how we can integrate the workflow into sumerian, and we have a very limited time to work with. You could potentially extend this function to actually call out a real appointment API ).
+
+17. In your email you should receive a notification with 2 urls. These uri are basically prepopulated to trigger `NotificationAPIurl` api gateway which will ultimately trigger our State Machine to continue it's path. At the moment it is waiting for the host to confirm that they are coming up to pick you "the visitor".
+
+	![step5.12](./images/step5.17.png)
+
+18. Just for fun however, don't click anything yet. ignore this email, and take another face capture from the scene. this is basically to emulate the behaviour that the Sumerian host has identified you once again and but the host has not respond to the email. Basically repeat step 5.2 and 5.3.
+
+19. Your Sumerian host should say that "Your host has not responded yet and is sending him a reminder."
+
+20. If you look at your workflow now, it should enters another different path.
+
+	![step5.12](./images/step5.20.png)
+
+21. If you now check your email, you should be able to see a new Notification email.
+
+22. Finally you can go ahead and click one of the link in the email. and see how your sumerian host respond. 
+
+	![step5.12](./images/step5.21.png)
+
+**Note:**
+
+If you would like to publish this scene into a real external url
+Please follow [this guide](https://docs.aws.amazon.com/sumerian/latest/userguide/editor-publish.html)
+
+</p>
+</details>
+
+--
+
+**That's all folks !**
+
+I hope this lab has been fun, and useful.
+I certainly had lots of fun building it. I would love to hear your feedback on the things that you found to be good and could be improved. If you are inclined, please drop me an email and let me know your feedback.
 
 
