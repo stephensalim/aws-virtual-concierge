@@ -1,176 +1,177 @@
-# Building an AI Virtual Concierge Experience.
-
 ![preston](./images/preston_hello.png) 
 
 
-Region To Pick !!!
+# **Welcome to "Building an AI Virtual Concierge" lab !**
+
+Author: Stephen Salim
+
+In this lab you will be building a virtual concierge powered using [Amazon Sumerian](https://aws.amazon.com/sumerian/). We will be Levaraging AWS AI service, [Amazon Rekognition](https://aws.amazon.com/rekognition/), to allow your Sumerian to idenitfy who you are, greet you, check if you have an appointment, and notify a of your arrival.
 
 
+![main_arch](./images/experience.png) 
 
-## **Welcome to the lab ! Are you ready to build ?**
 
-In this lab you will be building a virtual concierge host using [Amazon Sumerian](https://aws.amazon.com/sumerian/). Levaraging AWS AI service, [Amazon Rekognition](https://aws.amazon.com/rekognition/), your Sumerian host will be able to idenitfy who you are, greet you, check if you have an appointment, and notify the person of your arrival.
+The purpose of this lab is to showcase, one of the many possibilities you can integrate AWS services to create a customised concierge experience for your business need.
+In this lab we have taken the assumption of a typical reception workflow. Where a reception see a guest, greets them, check if the guest has an appointment, and notify the host of guest's arrival. In practice, you could customise the workflow defined in [AWS StepFunction](https://aws.amazon.com/step-functions/) to do you see fit for your business. From sending email, making a phone call, or maybe... trigger your coffee machine to make you a coffee. The possibilies are endless .... **~(^0^)~** 
 
-The purpose of this lab is to showcase to you one of the many possibiltis you can integrate AWS services to create a customised experience for your business need.
+### **Note:**
 
-In this lab we have taken the assumption of a typical reception workflow where a reception see a guest, greets them, check if the guest has an appointment, and notify the host of guest's arrival. 
-
-In practice, you could customise the workflow defined in [AWS StepFunction](https://aws.amazon.com/step-functions/) to whatever you see fit for your business. From notifying guest arrival, sending email, making a phone call, or maybe trigger a rasberry pi to make coffee for you. The possibilies are truly endless !! Wohoo... squid dance ~~ **~(^0^)~**
-
-OK Let's get cracking !
+We will be deploying services that may or may not be available on your typical AWS region of choice.
+Therefore, putting your best experience in mind, we recommend running this lab in **us-west-2 ( Oregon Region )**
 
 ## **Step 1 - Preparing your workspace.** ( 2 mins )
 
-In this lab we will be using [AWS Cloud9](https://aws.amazon.com/cloud9/) (cloud based IDE running on AWS) as our coding workstation. This is so that we have an isolated coding environment we could easily re-use for the lab. 
+First thing first, let's set up our work environment. For this we will be using [AWS Cloud9](https://aws.amazon.com/cloud9/) (cloud based IDE running on AWS) as our coding workstation. This is so that we have an isolated environment we could easily refresh for our next lab attendee. Don't worry ! this step won't take long, you'll be done before you know it. 
 
-<details><summary>[ CLICK HERE ]</summary>
+<details><summary>[ CLICK HERE ] for detailed steps</summary>
 <p>
 
-1. To access your IDE click Services on [AWS Console](https://us-west-2.console.aws.amazon.com/) in the Search bar type in Cloud9, select and click Cloud9 service.
+1. Access your IDE by clicking Services on [AWS Console](https://us-west-2.console.aws.amazon.com/).
+2. In the Search bar type in Cloud9, highlight and click Cloud9 service shown.
 
 	![step1.1](./images/step1.1.png) 
 
-2. Look for the `devlab-virtualconcierge` and click on **Open IDE** you should then have access to the IDE through your web browser.
+3. This should take you to the Cloud9 console.
+4. Look for the `devlab-virtualconcierge` environment and click on **Open IDE**, you should then have access to the IDE through your web browser.
 
 	![step1.2](./images/step1.2.png)
 
-3. On the terminal section of the bottom of the IDE, type in below command to cleanup all files in the folder `rm -rvf *`
+5. Notice that there are basically 3 different area in the IDE ( See above ). Files & Folder Structure on your left, Text Edit eara in the middle and Terminal in the bottom.
+6. The terminal section will be the are you will be executing the commands in today's lab.
+7. Lets start with a clean slate. Click on the Terminal section of the bottom of the IDE, type in below command to cleanup all files in the folder `rm -rvf *`
 
 	![step1.3](./images/step1.3.png)
 
-4. Once all files are cleaned download all the source codes into the folder from git repository. `git clone <gitrepo>`
+8. Once all files are cleaned download all the source codes into the environment from git repository. run this command below. 
 
-5. Type in `cd devlabs-virtualconcierge`
+	`git clone <gitrepo>`
 
-6. Now that all the codes are downloaded we are ready to work !
+9.  This should then create a folder called `devlabs-virtualconcierge`.
+10. Type in `cd devlabs-virtualconcierge` in the terminal to change your directory to the folder.
+11.	 For the rest of the lab, unless specified otherwise the commands to execute are to be executed from this folder. 
 </p>
 </details>
 
-## **Step 2 - Deploying Identity and Roles.** ( 2 mins )
+## **Step 2 - Deploying Face Rekognition.** ( 5 mins )
 
-The first thing we will create in our solutions are the security resources. 
-These security resources are responsible for the level of access our solution has between each elements and other AWS services. 
+Now that we have our source code downloaded, we are ready to build !YEAH ! (If this doesn't make sense to you, or if you don't know where the source code is. Please go back and do **Step 1**).
 
-<details><summary>[ CLICK HERE ]</summary>
+The first thing we are going to build is the Face recognition services. The resource we are going to deployed in this step, will be used to Indentifying user Face, and Record the Visitor detail. Here are the list of services we will be using:
+
+* [Amazon Rekognition](https://aws.amazon.com/rekognition/) This will be used to identify if visitor's face is known or unknown.
+* [Amazon S3](https://aws.amazon.com/s3/) will be used store visitor profile picture. 
+* [Amazon DynamoDB](https://aws.amazon.com/dynamodb/) will be used to store a visitor detail information.
+
+![step2_arch](./images/step2_arch.png)
+
+<details><summary>[ CLICK HERE ] for detailed steps</summary>
 <p>
 
-1. To do this let's deploy the cloudformation template called `vc-identity.yaml`.
+1. To deploy this services let's deploy the cloudformation template called `vc-rekognition.yaml` in the root of `devlabs-virtualconcierge` folder.
+2. Make sure you are in `devlabs-virtualconcierge` folder and execute below command in the Cloud9 Terminal (You can copy and paste this, but make sure to change the ParameterValue with your name).
 
 	```
-	aws cloudformation create-stack --stack-name vc-identity \
-									--template-body file://vc-identity.yaml \
-									--capabilities CAPABILITY_IAM
+	aws cloudformation create-stack --stack-name vc-rekognition \
+									--template-body file://vc-rekognition.yaml \
+									--capabilities CAPABILITY_IAM \
+									--parameters ParameterKey=YourFullName,ParameterValue=<your full name in lowercase>
 	```
-						
+	Example:
 	
-	Once the template is deployed you will see 2 resources being deployed in your account. An [Amazon Cognito](https://aws.amazon.com/cognito/) Identitiy pool and an [AWS IAM](https://docs.aws.amazon.com/IAM/latest/UserGuide/introduction.html) role. The Identity pool will be used by Sumerian later in the process to assume access to the rest of AWS services. The IAM role will be used by [AWS Lambda](https://aws.amazon.com/lambda/) Functions and [AWS StepFunction](https://aws.amazon.com/step-functions/), [Amazon API Gateway](https://aws.amazon.com/api-gateway/) to execute the workflow activities.  
+	```
+	aws cloudformation create-stack --stack-name vc-rekognition \
+									--template-body file://vc-rekognition.yaml \
+									--capabilities CAPABILITY_IAM \
+									--parameters ParameterKey=YourFullName,ParameterValue=stephensalim
+	```
+
+Once the cloudformation stack is deployed you should see the AWS service resources deployed in your account.
+To find out the information about resources deployed you can look at the CloudFormation Stack.
+Please follow the step below to see the stack information and gather the necessary values for later use.
+
+
+#### IMPORTANT
+
+The Value of resources deployed in this step will be needed to configure the sumerian scene on step 4. Rather than coming back later to this step, I recommend to follow this step now and take note of the resource values.
+
+To find out the information about resources deployed you can look at the CloudFormation Stack.
 	
+* Click Services on [AWS Console](https://us-west-2.console.aws.amazon.com/) in the Search bar type in CloudFormation, select and click CloudFormation service.
+	
+	![step2.1](./images/step2.1.png)
+
+* Select the `vc-rekognition` stack and click on the output tab.
+
+	![step2.cfn](./images/step2.cfn.png)
+
+	Take note the value of : 
+	
+	* `FaceCollectionId `
+	* `FaceBucket `
+	* `VisitorTable `
+	
+	This will be needed to configure Sumerian in **Step 4** of this lab.
+
+
+		
+</p>
+</details>
+		
+## **Step 3 - Deploying the Workflow.** ( 5 mins )
+
+In this step we will be building the core workflow, orchestrating actions such as lookup appointment wait for host confirmation, as well as drop message to a queue for the Sumerian host to read. 
+
+This workflow will receive an input containing face information from a face detection mechanism we built from the previous step. It will then provide instructions to our summerian host to read the appropriate action according to the flow. Here are the list of services we will be using:
+
+
+* [Amazon DynamoDB](https://aws.amazon.com/dynamodb/) will be used to store session Database.
+* [AWS Step Functions](https://aws.amazon.com/step-functions/) state machine to orchestrate the main activities.
+* [AWS Lambda](https://aws.amazon.com/lambda/) functions to support the workflow, including a the session manager to execute the workflow.
+* [Amazon Simple Notification Service](https://aws.amazon.com/sns/) to interface inbound channel to thr workflow as well as outbound notification.
+* [Amazon Simple Queue Service](https://aws.amazon.com/sqs/) to interface messaging from workflow to the Sumerian environment.
+* [Amazon API Gateway](https://aws.amazon.com/api-gateway/) to allow external service to response to the notification sent by the workflow.
+
+
+![step3_arch](./images/step3_arch.png)
+
+<details><summary>[ CLICK HERE ] for detailed steps</summary>
+<p>
+
+1. In this step there will be a number of lambda functions that will support the workflow. The source code of those functions are located under the `workflow-lambda` folder.
+2. Rather than packaging the functions one by one, we will levarage CloudFormation SAM to create a packaged template allowing our multiple lambda functions be deployed in one go.
+3. First, we will need an S3 bucket to store our lambda functions. let's create the s3 bucket by deploying this cloudformation template `vc-codebucket.yaml`
+4. Make sure you are in `devlabs-virtualconcierge` folder and execute below command in the Cloud9 Terminal (You can copy and paste this, but make sure to change the ParameterValue with your full name to make the bucket unique).
+
+ 
+	```
+	aws cloudformation create-stack --stack-name vc-codebucket \
+									--template-body file://vc-codebucket.yaml \
+									--capabilities CAPABILITY_IAM \
+									--parameters ParameterKey=YourFullName,ParameterValue=<your full name in lowercase>
+	```
+	Example:
+	
+	```
+	aws cloudformation create-stack --stack-name vc-codebucket \
+									--template-body file://vc-codebucket.yaml \
+									--capabilities CAPABILITY_IAM \
+									--parameters ParameterKey=YourFullName,ParameterValue=stephensalim
+	```
+	
+	Once the template is deployed you will see resources being deployed in your account.
 	To find out the information about resources deployed you can look at the CloudFormation Stack.
 	
 	* Click Services on [AWS Console](https://us-west-2.console.aws.amazon.com/) in the Search bar type in CloudFormation, select and click CloudFormation service.
-	
+		
 		![step2.1](./images/step2.1.png)
-	 
-	* Select the `vc-identity` stack and click on the output tab take note of the `CognitoIdentityPoolID ` and `WorkflowFunctionsExecutionRole ` value.
 	
-		![step2.2](./images/step2.2.png)
-		
-</p>
-</details>
-		
-
-## **Step 3 - Deploying Messaging Service.** ( 2 mins )
-
-Our Virtual concierge workflow will basically receive an input containing face information from a face detection mechanism and then provide instructions to our summerian host on what needs to be done next. To decouple between face detection architecture, workflow, Amazon Sumerian, we will levarage two AWS messaging services orchestrate message in the workflow. [Amazon Simple Notification Service](https://aws.amazon.com/sns/) will be used to receive message from face detection mechanisem and pass it on to the workflow and [Amazon Simple Queue Service](https://aws.amazon.com/sqs/) will be used as a mechanism to send instuctions to our sumerian host on what they need to do, in this case what message they need to speak.
-
-<details><summary>[ CLICK HERE ]</summary>
-<p>
-
-1.  To deploy this services let's deploy the cloudformation template called `vc-messaging.yaml`
-
-	```
-	aws cloudformation create-stack --stack-name vc-messaging \
-									--template-body file://vc-messaging.yaml
-	```
-	
-	Once the template is deployed you will see resources being deployed in your account.
-	To find out the information about resources deployed you can look at the CloudFormation Stack.
-	 
-	* Select the `vc-messaging` stack and click on the output tab take note of the `SumerianMessageQueueFIFO `,`SessionManagerSNSTopic `,`WorkflowNotificationSNSTopic` value.
-	
-		![step3.1](./images/step3.1.png)
-
-</p>
-</details>
-
-## **Step 4 - Deploying Face Recognition resources.** ( 3 mins )
-
-In this step we will be deploying all the resources needed Index faces that we capture. this will include an [Amazon Rekognition](https://aws.amazon.com/rekognition/) face collection resource as well as an S3 bucket that will be used to store visitor profile picture.
-
-<details><summary>[ CLICK HERE ]</summary>
-<p>
-
-1.  To deploy this services let's deploy the cloudformation template called `vc-rekognition.yaml`
-
-	```
-	aws cloudformation create-stack --stack-name vc-rekognition \
-									--template-body file://vc-rekognition.yaml \
-									--capabilities CAPABILITY_IAM \
-									--parameters ParameterKey=YourFullName,ParameterValue=<your full name in lowercase>
-	```
-	Example:
-	
-	```
-	aws cloudformation create-stack --stack-name vc-rekognition \
-									--template-body file://vc-rekognition.yaml \
-									--capabilities CAPABILITY_IAM \
-									--parameters ParameterKey=YourFullName,ParameterValue=stephensalim
-	```
-	
-	Once the template is deployed you will see resources being deployed in your account.
-	To find out the information about resources deployed you can look at the CloudFormation Stack.
-	 
-	* Select the `vc-rekognition` stack and click on the output tab take note of the `FaceCollectionId `,`FaceBucket ` value.
-	
-		![step3.1](./images/step4.1.png)
-
-</p>
-</details>
-
-## **Step 5 - Deploying the Workflow.** ( 5 mins )
-
-Alright we are getting there ! In this step we will be building the core workflow our solutions use to orchestrate messaging and action to Amazon Sumerian.
-This step will include building Session and Visitor Database using [Amazon DynamoDB](https://aws.amazon.com/dynamodb/), [Amazon API Gateway](https://aws.amazon.com/api-gateway/) to allow external service to response to the notification sent by the workflow. The Workflow StateMachine using [AWS Step Functions](https://aws.amazon.com/step-functions/).
-
-Let's do this !
-
-<details><summary>[ CLICK HERE ]</summary>
-<p>
-
-1.  First step to this, let's create the s3 bucket where we will deploy our lambda functions `vc-codebucket.yaml`
-
-	```
-	aws cloudformation create-stack --stack-name vc-codebucket \
-									--template-body file://vc-codebucket.yaml \
-									--capabilities CAPABILITY_IAM \
-									--parameters ParameterKey=YourFullName,ParameterValue=<your full name in lowercase>
-	```
-	Example:
-	
-	```
-	aws cloudformation create-stack --stack-name vc-codebucket \
-									--template-body file://vc-codebucket.yaml \
-									--capabilities CAPABILITY_IAM \
-									--parameters ParameterKey=YourFullName,ParameterValue=stephensalim
-	```
-	
-	Once the template is deployed you will see resources being deployed in your account.
-	To find out the information about resources deployed you can look at the CloudFormation Stack.
-	 
 	* Select the `vc-codebucket` stack and click on the output tab take note of the `WorkflowCodeBucket`
-		![step5.1](./images/step5.1.png)
+		
+		![step3.cfn1](./images/step3.cfn1.png)
 	
-2.  Second Step is to package the functions and prepare them to deployment. This step will basically uploads all the related lambda function to the S3 bucket specificed, and create a packaged template `/tmp/vc-workflow.yaml.output` referencing to all the files uploaded in s3.
+5. Now that we have created the S3 Bucket, we will next package the lambda functions and prepare them to deployment. 
+6. This step will basically uploads all the related lambda function to the S3 bucket specificed in one command, and create a packaged template `/tmp/vc-workflow.yaml.output` referencing to all the files uploaded in s3 ready to be deployed. (You can copy and paste this, but make sure to change the --s3-bucket calue with the s3 bucket created in previous step  with your `WorkflowCodeBucket `).
+
 
 	```
 	aws cloudformation package --template-file vc-workflow.yaml \
@@ -185,15 +186,15 @@ Let's do this !
 								--output-template-file /tmp/vc-workflow.yaml.output
 	```
 	
-3. Once the `/tmp/vc-workflow.yaml.output` is ready, the next step is to actually deploy the packaged template, and referncing the messaging and identitiy resources we created in previous steps.
+7. The previous step will produce `/tmp/vc-workflow.yaml.output` file, this is the packaged template that we can now deploy into CloudFormation. 
+8. The next step is to deploy the packaged template.
+9. You can copy and paste command below, but make sure to change the HostEmailAddress value to an email address you have access to. (This will basically emulate the email address our sumerian host will use to notify guest arrival).
 
 	```
 	aws cloudformation deploy --template-file /tmp/vc-workflow.yaml.output \
 								--stack-name vc-workflow \
 								--capabilities CAPABILITY_IAM \
-								--parameter-overrides SumerianMessageQueueFIFO=<SumerianMessageQueueFIFO value in step 3 > \
-								WorkflowNotificationSNSTopic=<Value of WorkflowNotificationSNSTopic in step 3 > \
-								WorkflowFunctionsExecutionRole=<Value of WorkflowFunctionsExecutionRole in step 2>
+								--parameter-overrides HostEmailAddress=<Email Address>
 	```
 	Example:
 	
@@ -201,70 +202,200 @@ Let's do this !
 	aws cloudformation deploy --template-file /tmp/vc-workflow.yaml.output \
 								--stack-name vc-workflow \
 								--capabilities CAPABILITY_IAM \
-								--parameter-overrides SumerianMessageQueueFIFO=https://sqs.us-west-2.amazonaws.com/022787131977/SumerianMessageQueueFIFO.fifo \
-								WorkflowNotificationSNSTopic=arn:aws:sns:us-west-2:022787131977:SessionManagerSNSTopic \
-								WorkflowFunctionsExecutionRole="arn:aws:iam::022787131977:role/vc-identity-WorkflowFunctionsExecutionRole-1NWSJE8ZXETSZ"
+								--parameter-overrides HostEmailAddress=sssalim@demoemail.awsapps.com
 	```
+
+10. Wait until the stack deployed is complete, then follow the steps below.
 	
-	Once the template is deployed you will see resources being deployed in your account.
-	To find out the information about resources deployed you can look at the CloudFormation Stack.
-	 
-	* Select the `vc-workflow` stack and click on the output tab take note of the `WorkflowCodeBucket`
-		![step5.2](./images/step5.2.png)
-		
-		
+#### IMPORTANT
+
+The Value of resources deployed in this step will be needed to configure the sumerian scene on step 4. Rather than coming back later to this step, I recommend to follow this step now and take note of the resource values.
+
+To find out the information about resources deployed you can look at the CloudFormation Stack.
+	
+* Click Services on [AWS Console](https://us-west-2.console.aws.amazon.com/) in the Search bar type in CloudFormation, select and click CloudFormation service.
+	
+	![step2.1](./images/step2.1.png)
+
+* Select the `vc-workflow` stack and click on the output tab take note of the value
+
+	![step3.cfn2](./images/step3.cfn2.png)
+
+	Take note the value of : 
+	
+	* `SessionManagerSNSTopic `
+	* `SumerianMessageQueueFIFO `
+	
+	This will be needed to configure Sumerian in **Step 4** of this lab.
+	
 </p>
 </details>
 
-## **Step 6 - Deploying the Sumerian Scene.** ( 10 mins )
+## **Step 4 - Deploying the Sumerian Resources.** ( 10 mins )
 
-In this step we will be building the Amazon Sumerian environment and configuring the environment so that it can connect to the rest of the workflow. 
+In this step we will be building the Amazon Sumerian environment and configuring the environment so that it can connect to the rest of the workflow. If we have 2 hours to run this lab, we would go through building the sumerian scene from scratch. Since we only have limited time, I have packaged the sumerian scene in a zip file ready for you to import and configure. Sumerian is based in javascript, and in our scene today there will be a number of scripts that are basically responsible to do the following.
 
-<details><summary>[ CLICK HERE ]</summary>
+**WebCam Script**
+
+* Capture visitor face from WebCam, Find a match in Amazon Recognition Collection & Visitor database then send Notification to the Session Manager SNS topic to trigger the workflow.
+
+**Registration Script**
+
+* Capture visitor face from WebCam, Register face in Amazon Recognition Collection & Visitor database then send Notification to the Session Manager SNS topic to trigger the workflow.
+
+**Message Pooler Script**
+
+* Poll SQS message for any new message from the workflow and then trigger Read & Display Message script
+
+**Message Pooler Script**
+
+* Execute Sumerian host to speak the message, and display information in scene.
+
+To enable all the above Sumerian scene will need access AWS service api with the approproate credential. and to facilitate that we will be using [Amazon Cognito](https://aws.amazon.com/cognito/) identitiy pool.
+
+Here are the key services we will deploy in this step.
+
+* [Amazon Cognito](https://aws.amazon.com/cognito/) to provide access for our sumerian scene to AWS APIs including to start the workflow.
+* [Amazion Sumerian](https://aws.amazon.com/sumerian/) used to provide an representation of virtual host for the user. 
+
+![step4_arch](./images/step4_arch.png)
+
+<details><summary>[ CLICK HERE ] for detailed steps</summary>
 <p>
 
-1. To access Sumerian Services on [AWS Console](https://us-west-2.console.aws.amazon.com/) in the Search bar type in Sumerian, select and click Sumerian service.
+### Creating Identity Pool
 
-	![step6.1](./images/step6.1.png)
+1. Deploy the cloudformation template called `vc-identity.yaml` to create cognito identitiy pool resources.
+
+	```
+	aws cloudformation create-stack --stack-name vc-identity \
+									--template-body file://vc-identity.yaml \
+									--capabilities CAPABILITY_IAM
+	```
+						
+#### IMPORTANT
+
+The Value of resources deployed in this step will be needed to configure the sumerian scene on step 4. Rather than coming back later to this step, I recommend to follow this step now and take note of the resource values.
+
+To find out the information about resources deployed you can look at the CloudFormation Stack.
+	
+* Click Services on [AWS Console](https://us-west-2.console.aws.amazon.com/) in the Search bar type in CloudFormation, select and click CloudFormation service.
+	
+	![step2.1](./images/step2.1.png)
+	 
+* Select the `vc-identity` stack and click on the output tab take note of the 
+	
+	![step4.cfn1](./images/step4.cfn1.png)
+		
+	Take note the value of : 
+	
+	* `CognitoIdentityPoolID`
+	
+	This will be needed to configure Sumerian identitiy pool later in this step.
+
+
+### Importing & Configuring Sumerian Scene
+
+1. Finally, lets access Sumerian. From [AWS Console](https://us-west-2.console.aws.amazon.com/) in the Search bar type in Sumerian, select and click Sumerian service.
+
+	![step4.1](./images/step4.1.png)
 
 2. You should then be taken to the Sumerian Console (as per below). Click **Create New Scene**, 
 
-	![step6.2](./images/step6.2.png)
+	![step4.2](./images/step4.2.png)
 
-3. **Download** the Sumerian Scene bundle [here]()
+3. Enter `<Your full name>-devlabs-vcdemo` as the scene name, then click **Create **to start a blank scene.
 
-4. enter `<Your full name>-devlabs-vcdemo` as the scene name, then click **Create **to start a blank scene.
+	![step4.4](./images/step4.4.png)
 
-	![step6.3](./images/step6.4.png)
+4. Click **Import Asset**.
 
-5. Click **Import Asset**.
+	![step4.5](./images/step4.5.png)
 
-	![step6.6](./images/step6.5.png)
+5. Click **Browse** and select the Zip file in `~/devlabs-virtualconcierge/sumerian-bundle`, or just drag the Zip file to the Drop your file here... area.
 
-6. Click **Browse** and select the Zip file downloaded in Step 6.4 above, or just drag the Zip file to the Drop your file here... area.
+	![step4.6](./images/step4.6.png)
 
-	![step6.7](./images/step6.6.png)
+7. This will then load the entire asset in the bundle to the scene. Depending on the internet speed the loading of the scene might take up to 5 minutes. Once the scene is fully loaded you should see all the entities populated on the left hand side if the menu. 
 
-7. Depending on the internet speed the loading of the scene might take up to 5 minutes.
-(While waiting you can execute #Step7 - Connect the plug if you prefer.) 
-Once the scene is fully loaded you should see all the entities populated on the left hand side if the menu. 
+	![step4.7](./images/step4.7.png)
 
-	![step6.7](./images/step6.7.png)
+8. Click on the **VCCamera** entity press **F** in your keyboard and scroll up your mouse until you see your host in the scene.
 
-8. Click on the **Main Camera** entity press **F** in your keyboard and scroll up your mouse until you see your host in the scene.
+9. Select the **VCCamera** entity in the left menu, then tick the **Main Camera** option on the right hand side menu. This will basically set the scene to use the entity called `Main Camera` as the default camera to load the scene
 
-9. Select the **Main Camera** as shown in the screen shot below, this will basically set the scene to use the entity called Main Camera as the default camera to load the scene
-
-	![step6.7](./images/step6.9.png)
+	![step4.8](./images/step4.8.png)
 	
-10. Try clicking the play button on the scene, If you correctly set the camera up, your scene should automatically load like below. 
+10. Try clicking the play button on the scene, If you correctly set the camera up, your scene should automatically load with the host zoomed in like below. Once you confirm this, stop by pressing the stop button in the scene.
 
-	![step6.7](./images/step6.10.png)
+	![step4.9](./images/step4.9.png)
 
-11. Select the Text Editor by clicking on Tools then Text Editor or Press **J** in your keyboard. This should take you to the text editor where you can edit the HTML element as well as JavaScripts you embed into the scene.
+	![step4.10](./images/step4.10.png)
+
+11. Select the **Text Editor** by clicking on Tools on the top left bar of the editor, then **Text Editor**. Alternatively, Press **J** in your keyboard. This should take you to the text editor where you can edit the HTML element as well as JavaScripts you embed into the scene.
+
+	![step4.11](./images/step4.11.png)
+	
+12. Select the **Parameter Loader** script. This script is responsible in loading all reference to the workflow resources in the scene.
+13. Change the value of each of the variables with the designated values you took note from CloudFormation in previous steps.
+	
+	![step4.12](./images/step4.12.png)
+	
+	Here's a code snippet you can copy and paste.
+	Replace the variable value with the resources valued deployed in step 2 and 3. 
+	Make sure there are no space before or after the ' ' sign
+	
+	```
+	ctx.worldData.mugfacebucket = '< Replace with Value of FaceBucket in Step 2 >'
+	ctx.worldData.facecollection = '< Replace with Value of FaceCollectionId in Step 2 >'
+	ctx.worldData.visitortable = '<Replace with Value of VisitorTable in Step 2 >'
+	ctx.worldData.facesnstopicArn = '<Replace with Value of SessionManagerSNSTopic in Step 3 >'
+	ctx.worldData.messagequeue = '<Replace with Value of SumerianMessageQueueFIFO in Step 3 >'
+	```
+	
+	Once you configured them correctly it should look like this.
+	![step4.12b](./images/step4.12b.png)
+	
+12. Press **ctrl+s** (Windows) or **command+s** (Mac) in the Text Editor to save all changes. (Make sure the text editor indicator is set to green. )
+
+
+	![step4.15](./images/step4.13.png)
+
+13. Now that all reference to the workflow is configured, the next thing to do is to provide Amazon Sumerian access to those resources. And we do this by referncing the Cognito Identity Pool we created earlier at the begining of this step.
+14. Click on the root of your entity scene, then on the right hand menu expand the AWS Configuration section. Look for Cognito Identity Pool ID, Paste in the value of `CognitoIdentityPoolID` you took note earlier in this step.
+
+	![step4.15](./images/step4.15.png)
+
+15. Press **ctrl+s** (Windows) or **command+s** (Mac) in the Text Editor to save all changes.
+
+	![step4.12b](./images/step4.12c.png)
+
 
 </p>
 </details>
-## **Step 7 - Connect the plug.**
 
-## **Step 8 - Lets Test this baby.**
+## **Step 5 - Test the Scene.**
+
+Now that we have completed all the configuration, let's take it for a spin.
+
+
+
+![main_arch](./images/main_arch.png) 
+
+1. Save the scene.
+2. Publish the Scene; Click **Publish** > **Create public link**
+3. Click **Publish** wait until it's published.
+4. Once the scene is published.
+5. Copy the public link and open it on new window.
+6. Position your face into the WebCam, then click on the Camera image.
+7. If you would like to retake the picture click on X otherwise press the V image if you are ready to continue.
+8. At this point the WebCamScript will check your face against the FaceCollection you created and it will send the result to your SNS notification to trigger the workflow.
+9. Because this is the first time you are seen the Workflow should enter the state where it'll get the sumerian host to say that they do not know you and send instruction into Sumerian Scene to open the Registration face.
+10. So now Go ahead and pose for the best mug shot, click on the camera, type in your name, and click submit. 
+11. At this point RegistrationScript will register your face to the FaceCollection, upload your mug shot into the FaceCollectionS3 bucket and send the SNS notification to trigger the workflow.
+12. This time because there is a face rekognised in the workflow it will enter the state where it will look for an appointment. 
+13. When appointment is found it will send message to sumerian host to say that you have an appointment and send notification to the host. 
+
+
+
+
