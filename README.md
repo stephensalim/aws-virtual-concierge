@@ -432,6 +432,8 @@ Once you followed Step 1 - 4 above, now it is time to see it in action.
 
 14. This time, your sumererian host should know your name, greet you and check for your appointment.
 
+	![step5.14](./images/step5.14.png)
+
 15. And if you then trace back to the State machine workflow following steps described in 5.10 you should see a workflow that looks like this.
 
 	![step5.12](./images/step5.15.png)
