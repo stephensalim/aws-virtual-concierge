@@ -6,11 +6,6 @@ Outputs:
     Description: The cognito identity pool for sumerian to communicate with AWS services.
     Value: !Ref CognitoIdentityPool
 
-  WorkflowFunctionsExecutionRole:
-    Description: IAM Role that will be used by Lambda Functions and the test of the workflow process
-    Value: !GetAtt WorkflowFunctionsExecutionRole.Arn
-
-
 Resources:
     ##############################################
     # Resouces for Summerian to assume Identitiy #
@@ -52,38 +47,3 @@ Resources:
         Roles:
           unauthenticated:
             Fn::GetAtt: [CognitoIdentityExampleRole, Arn]
-            
-            
-    #########################################################
-    # Resouces for the entire workflow to do it's acitivity #
-    #########################################################
-    WorkflowFunctionsExecutionRole:
-        Type: "AWS::IAM::Role"
-        Properties:
-          AssumeRolePolicyDocument:
-            Statement:
-              -
-                Effect: "Allow"
-                Principal:
-                  Service:
-                    - "apigateway.amazonaws.com"
-                    - "lambda.amazonaws.com"
-                    -
-                      Fn::Join:
-                        - ""
-                        - - "states."
-                          -
-                            Ref: "AWS::Region"
-                          - ".amazonaws.com"
-                Action:
-                  - "sts:AssumeRole"
-          Path: "/"
-          Policies:
-            -
-              PolicyName: "Policies"
-              PolicyDocument:
-                Statement:
-                  -
-                    Effect: "Allow"
-                    Action: "*"
-                    Resource: "*"

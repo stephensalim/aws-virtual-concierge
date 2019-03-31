@@ -27,7 +27,7 @@ def lambda_handler(event, context):
         if event['Activity'] == 'HostResponse':
             time.sleep(5)
             token = vcsm.get_activitiy_token(os.environ['ActivityHostResponseArn'])
-            result['HostNotification'] = {} #vcsm.send_sns(token,os.environ['SNSTopic'])
+            result['HostNotification'] = {}
             now_response = os.environ['ResponseUrl'] + "?"+ vcsm.generate_params('now_response',token)
             soon_response = os.environ['ResponseUrl'] + "?"+ vcsm.generate_params('soon_response',token)
             result['HostNotification']['Token'] = token
@@ -38,38 +38,27 @@ def lambda_handler(event, context):
             ################
             # FORM EMAIL MESSAGE
             ################
-            # msg = """ 
-            # ===============================================
-            # You have a guest !
-            # Please click on one of the response link below.
-            # ===============================================
-            # Coming out now = {}
-            # Coming out soon = {}
-            # """.format(now_response,soon_response)
+            msg = """ 
+            ===============================================
+            You have a guest !
+            Please click on one of the response link below.
+            ===============================================
+            Coming out now = {}
+            Coming out soon = {}
+            """.format(now_response,soon_response)
             
             ################
             # SEND JSON MESSAGE
             ################
-            msg = event['Visitor']
-            msg['HostNotification'] = {}
-            msg['HostNotification']['ResponseOption'] = {}
-            msg['HostNotification']['ResponseOption']['now_response'] = now_response
-            msg['HostNotification']['ResponseOption']['soon_response'] = soon_response
+            # msg = event['Visitor']
+            # msg['HostNotification'] = {}
+            # msg['HostNotification']['ResponseOption'] = {}
+            # msg['HostNotification']['ResponseOption']['now_response'] = now_response
+            # msg['HostNotification']['ResponseOption']['soon_response'] = soon_response
             
             vcsm.update_session(event['Visitor']['FaceId'],'HostNotificationToken',token,os.environ['SessionTable'])
-            vcsm.send_sns(json.dumps(msg),os.environ['SNSTopic'])
+            vcsm.send_sns(msg,os.environ['SNSTopic'])
 
-        if event['Activity'] == 'HostArrival':
-            time.sleep(5)
-            token = vcsm.get_activitiy_token(os.environ['ActivityHostArrivalArn'])
-            result['HostArrival'] = {} #vcsm.send_sns(token,os.environ['SNSTopic'])
-            arrived = os.environ['ResponseUrl'] + "?"+ vcsm.generate_params('arrived',token)
-            cancelled = os.environ['ResponseUrl'] + "?"+ vcsm.generate_params('cancelled',token)
-            result['HostArrival']['Token'] = token
-            result['HostArrival']['ArrivalOption'] = {}
-            result['HostArrival']['ArrivalOption']['arrived'] = arrived
-            result['HostArrival']['ArrivalOption']['cancelled'] = cancelled
-            vcsm.update_session(event['Visitor']['FaceId'],'HostArrivalToken',token,os.environ['SessionTable'])
         
         event.pop('Activity', None)
         result.update(event)

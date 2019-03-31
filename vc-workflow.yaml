@@ -7,10 +7,6 @@ Outputs:
     Description: "The Session Manager Lambda Function ARN to connect with the SessionManagerSNSTopic in Step 2"
     Value: !GetAtt SessionManager.Arn
 
-  VisitorTable:
-    Description: "The DynamoDB Containing Registered Visitor Table"
-    Value: !Ref VisitorTable
-
   SessionTable:
     Description: "The DynamoDB Containing Registered Session Table"
     Value: !Ref SessionTable
@@ -22,20 +18,104 @@ Outputs:
             - "https://${Api}.execute-api.${AWS::Region}.amazonaws.com/Prod/notifyguest"
             - { Api: !Ref NotificationResponseApi }
 
+  SumerianMessageQueueFIFO:
+    Description: The message queue that will be used to receive instructions from workflow.
+    Value: !Ref SumerianMessageQueueFIFO
+      
+  WorkflowNotificationSNSTopic:
+    Description: SNS Topic to send notification from Workflow
+    Value: !Ref WorkflowNotificationSNSTopic
+      
+  SessionManagerSNSTopic:
+    Description: SNS topic responsible to send Face informatin to SessionManager Function
+    Value: !Ref SessionManagerSNSTopic
+
+  WorkflowFunctionsExecutionRole:
+    Description: IAM Role that will be used by Lambda Functions and the test of the workflow process
+    Value: !GetAtt WorkflowFunctionsExecutionRole.Arn
+
+  WorkFlowStateMachine:
+    Description: Workflow State Machine
+    Value: !Ref WorkFlowStateMachine
+
 
 Parameters: 
-  SumerianMessageQueueFIFO:
+  HostEmailAddress: 
     Type: String
-    Description: "Please enter the SumerianMessageQueueFIFO value from Step 2"
-  WorkflowNotificationSNSTopic: 
-    Type: String
-    Description: "Please enter the WorkflowNotificationSNSTopic value from Step 2"
-  WorkflowFunctionsExecutionRole:
-    Type: String
-    Description: "Please enter the WorkflowFunctionsExecutionRole value from Step 1"
-    
-Resources:
+    Description: Please enter the email addess you would like the virtual concierge to send notification to.
 
+
+Resources:
+            
+  #########################################################
+  # Resouces for the entire workflow to do it's acitivity #
+  #########################################################
+  WorkflowFunctionsExecutionRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+          AssumeRolePolicyDocument:
+            Statement:
+              -
+                Effect: "Allow"
+                Principal:
+                  Service:
+                    - "apigateway.amazonaws.com"
+                    - "lambda.amazonaws.com"
+                    -
+                      Fn::Join:
+                        - ""
+                        - - "states."
+                          -
+                            Ref: "AWS::Region"
+                          - ".amazonaws.com"
+                Action:
+                  - "sts:AssumeRole"
+          Path: "/"
+          Policies:
+            -
+              PolicyName: "Policies"
+              PolicyDocument:
+                Statement:
+                  -
+                    Effect: "Allow"
+                    Action: "*"
+                    Resource: "*"
+
+
+  ####################################################################
+  # Message Queue for sumerian to receive instructions from workflow #
+  ####################################################################
+  SumerianMessageQueueFIFO:
+    Type: "AWS::SQS::Queue"
+    Properties:
+      QueueName: "SumerianMessageQueueFIFO.fifo"
+      FifoQueue: true
+            
+  #########################################################
+  # SNS Topic for Workflow to send Notification & Updates #
+  #########################################################
+  WorkflowNotificationSNSTopic: 
+    Type: "AWS::SNS::Topic"
+    Properties:
+      TopicName: "WorkflowNotificationSNSTopic"
+      Subscription:
+          - 
+            Endpoint: !Ref HostEmailAddress
+            Protocol: email
+         
+  #########################################################
+  # SNS Topic That will receive detected face information #
+  # To be paired with SessionManager Lambda Function      #
+  #########################################################
+  SessionManagerSNSTopic: 
+    Type: "AWS::SNS::Topic"
+    Properties:
+      TopicName: "SessionManagerSNSTopic"
+      Subscription:
+          - 
+            Endpoint: !GetAtt SessionManager.Arn
+            Protocol: lambda
+         
   ########################################################
   # Lambda Functions responsible for the entier workdlow #
   ########################################################
@@ -47,7 +127,7 @@ Resources:
       Description: 'Lambda Function responsible for putting Message into SumerianMessageQueueFIFO'
       MemorySize: 1536
       Timeout: 15
-      Role: !Ref WorkflowFunctionsExecutionRole
+      Role: !GetAtt WorkflowFunctionsExecutionRole.Arn
       CodeUri: ./workflow-lambda
       Environment:
         Variables:
@@ -63,7 +143,7 @@ Resources:
       Description: 'Lambda Function to check if face captured'
       MemorySize: 1536
       Timeout: 15
-      Role: !Ref WorkflowFunctionsExecutionRole
+      Role: !GetAtt WorkflowFunctionsExecutionRole.Arn
       CodeUri: ./workflow-lambda
       Environment:
         Variables:
@@ -79,7 +159,7 @@ Resources:
       Description: 'Lambda Function Responsible to clear session'
       MemorySize: 1536
       Timeout: 15
-      Role: !Ref WorkflowFunctionsExecutionRole
+      Role: !GetAtt WorkflowFunctionsExecutionRole.Arn
       CodeUri: ./workflow-lambda
       Environment:
         Variables:
@@ -95,7 +175,7 @@ Resources:
       Description: 'Lambda Function Responsible to manage session being executed'
       MemorySize: 1536
       Timeout: 15
-      Role: !Ref WorkflowFunctionsExecutionRole
+      Role: !GetAtt WorkflowFunctionsExecutionRole.Arn
       CodeUri: ./workflow-lambda
       Environment:
         Variables:
@@ -107,6 +187,14 @@ Resources:
           WorkFlowArn: !Ref WorkFlowStateMachine
       Layers:
           - !Ref WorkflowManagerToolKit
+          
+  SessionManagerInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt SessionManager.Arn
+      Action: 'lambda:InvokeFunction'
+      Principal: sns.amazonaws.com
+          
 
   AppointmentLookup:
     Type: 'AWS::Serverless::Function'
@@ -116,7 +204,7 @@ Resources:
       Description: 'Lambda Function responsible to check available appointment.'
       MemorySize: 1536
       Timeout: 15
-      Role: !Ref WorkflowFunctionsExecutionRole
+      Role: !GetAtt WorkflowFunctionsExecutionRole.Arn
       CodeUri: ./workflow-lambda
       Layers:
           - !Ref WorkflowManagerToolKit
@@ -129,7 +217,7 @@ Resources:
       Description: 'Trigger Notification with a URL to response back'
       MemorySize: 1536
       Timeout: 15
-      Role: !Ref WorkflowFunctionsExecutionRole
+      Role: !GetAtt WorkflowFunctionsExecutionRole.Arn
       CodeUri: ./workflow-lambda
       Environment:
         Variables:
@@ -139,7 +227,6 @@ Resources:
                   - { Api: !Ref NotificationResponseApi }
           SNSTopic: !Ref WorkflowNotificationSNSTopic
           ActivityHostResponseArn: !Ref ActivityHostResponse
-          ActivityHostArrivalArn: !Ref ActivityHostArrival
           SessionTable: !Ref SessionTable
       Layers:
           - !Ref WorkflowManagerToolKit
@@ -152,7 +239,7 @@ Resources:
       Description: 'Manage Virtual Concierge Session'
       MemorySize: 1536
       Timeout: 15
-      Role: !Ref WorkflowFunctionsExecutionRole
+      Role: !GetAtt WorkflowFunctionsExecutionRole.Arn
       CodeUri: ./workflow-lambda
       Layers:
           - !Ref WorkflowManagerToolKit
@@ -165,7 +252,7 @@ Resources:
       Description: 'Flatten Payload response from List of JSON to JSON'
       MemorySize: 1536
       Timeout: 15
-      Role: !Ref WorkflowFunctionsExecutionRole
+      Role: !GetAtt WorkflowFunctionsExecutionRole.Arn
       CodeUri: ./workflow-lambda
       Layers:
           - !Ref WorkflowManagerToolKit
@@ -206,7 +293,7 @@ Resources:
                 responses: {"200": {"description": "200 response","schema": {"$ref": "#/definitions/Empty"}}}
                 x-amazon-apigateway-request-validator: "Validate query string parameters and headers"
                 x-amazon-apigateway-integration:
-                  credentials: !Ref WorkflowFunctionsExecutionRole
+                  credentials: !GetAtt WorkflowFunctionsExecutionRole.Arn
                   uri: 
                     'Fn::Sub':
                         - "arn:aws:apigateway:${AWS::Region}:lambda:path//2015-03-31/functions/${lambdafunc}/invocations"
@@ -249,54 +336,7 @@ Resources:
         ReadCapacityUnits: "1"
         WriteCapacityUnits: "1"
       TableName: "WorkFlowSessionTable"
-  
-  # AppointmentTable:
-  #   Type: "AWS::DynamoDB::Table"
-  #   Properties:
-  #     AttributeDefinitions:
-  #       -
-  #         AttributeName: "VisitorId"
-  #         AttributeType: "S"
-  #     KeySchema:
-  #       -
-  #         AttributeName: "VisitorId"
-  #         KeyType: "HASH"
-  #     ProvisionedThroughput:
-  #       ReadCapacityUnits: "1"
-  #       WriteCapacityUnits: "1"
-  #     TableName: "WorkFlowAppointmentTable"
 
-  # EmployeeTable:
-  #   Type: "AWS::DynamoDB::Table"
-  #   Properties:
-  #     AttributeDefinitions:
-  #       -
-  #         AttributeName: "EmployeeId"
-  #         AttributeType: "S"
-  #     KeySchema:
-  #       -
-  #         AttributeName: "EmployeeId"
-  #         KeyType: "HASH"
-  #     ProvisionedThroughput:
-  #       ReadCapacityUnits: "1"
-  #       WriteCapacityUnits: "1"
-  #     TableName: "WorkFlowEmployeeTable"
-
-  VisitorTable:
-    Type: "AWS::DynamoDB::Table"
-    Properties:
-      AttributeDefinitions:
-        -
-          AttributeName: "VisitorId"
-          AttributeType: "S"
-      KeySchema:
-        -
-          AttributeName: "VisitorId"
-          KeyType: "HASH"
-      ProvisionedThroughput:
-        ReadCapacityUnits: "1"
-        WriteCapacityUnits: "1"
-      TableName: "WorkFlowVisitorTable"
 
   #############################################
   # StepFunction Resources to manage Sessions #
@@ -315,7 +355,6 @@ Resources:
   WorkFlowStateMachine:
     Type: AWS::StepFunctions::StateMachine
     Properties:
-      StateMachineName: "WorkFlowStateMachine"
       DefinitionString: 
                   !Sub  
                     - |-
@@ -467,4 +506,4 @@ Resources:
                         	}
                         }
                     - { ClearSession: !GetAtt ClearSession.Arn, FlattenResponse: !GetAtt FlattenResponse.Arn, SendNotification: !GetAtt SendNotification.Arn, ActivityHostResponse: !Ref ActivityHostResponse , ActivityHostArrival: !Ref ActivityHostArrival , SumerianMessenger: !GetAtt SumerianMessenger.Arn, CheckFaceCaptured: !GetAtt CheckFaceCaptured.Arn, AppointmentLookup: !GetAtt AppointmentLookup.Arn }
-      RoleArn: !Ref WorkflowFunctionsExecutionRole
+      RoleArn: !GetAtt WorkflowFunctionsExecutionRole.Arn

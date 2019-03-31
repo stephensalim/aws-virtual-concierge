@@ -9,29 +9,36 @@ Parameters:
 Outputs:
   FaceBucket:
     Description: The S3 Bucket Containing people Mug Face.
-    Value: !Ref FaceBucket
+    Value: 
+        !Sub 
+          - '${YourFullName}-facebucket-${AWS::Region}-${AWS::AccountId}'
+          - { YourFullName: !Ref YourFullName }
 
   FaceCollectionId:
     Description: Your Recognition Face CollectionId
     Value: !GetAtt FaceCollectionCustom.CollectionId
 
+  VisitorTable:
+    Description: The DynamoDB Containing Registered Visitor Table
+    Value: !Ref VisitorTable
+
 Resources:
-    FaceBucket:
-      Type: AWS::S3::Bucket
+
+    VisitorTable:
+      Type: "AWS::DynamoDB::Table"
       Properties:
-        BucketName: 
-            !Sub 
-              - '${YourFullName}-facebucket-${AWS::Region}-${AWS::AccountId}'
-              - { YourFullName: !Ref YourFullName }
-        AccessControl: PublicReadWrite
-        CorsConfiguration:
-          CorsRules:
-          - AllowedHeaders: ['*']
-            AllowedMethods: [GET,PUT,POST,DELETE]
-            AllowedOrigins: ['*']
-            Id: myCORSRuleId1
-            MaxAge: '3600'
-            ExposedHeaders: [x-amz-server-side-encryption, x-amz-request-id, x-amz-id-2]
+        AttributeDefinitions:
+          -
+            AttributeName: "VisitorId"
+            AttributeType: "S"
+        KeySchema:
+          -
+            AttributeName: "VisitorId"
+            KeyType: "HASH"
+        ProvisionedThroughput:
+          ReadCapacityUnits: "1"
+          WriteCapacityUnits: "1"
+        TableName: "WorkFlowVisitorTable"
 
     CustomResourceExecutionRole:
       Type: "AWS::IAM::Role"
@@ -119,6 +126,95 @@ Resources:
                         
                         coll = response['CollectionArn'].split("/")
                         responseData = {'CollectionId': coll[1]}
+                        cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData)
+                  except Exception as e:
+                      responseData = {'Error': str(e)}
+                      cfnresponse.send(event, context, cfnresponse.FAILED, responseData)
+                      
+                      
+    S3BucketFaceCollectionCustom:
+      Type: Custom::S3BucketFaceCollectionCustom
+      Version: 1.0
+      Properties:
+        ServiceToken: !GetAtt S3BucketFaceCollection.Arn
+        FaceBucket: 
+            !Sub 
+              - '${YourFullName}-facebucket-${AWS::Region}-${AWS::AccountId}'
+              - { YourFullName: !Ref YourFullName }
+        
+        
+    S3BucketFaceCollection:
+        Type: "AWS::Lambda::Function"
+        Properties:
+          Handler: index.lambda_handler
+          Role: !GetAtt CustomResourceExecutionRole.Arn
+          Runtime: python3.6
+          Timeout: 120
+          Code:
+            ZipFile: |
+              import boto3
+              import cfnresponse
+              import os
+
+              def lambda_handler(event, context):
+                  try:
+                      
+                      if event['RequestType'] == 'Create':
+                       
+                        FaceBucket=event['ResourceProperties']['FaceBucket']
+                        print('Attempting to create bucket ' + FaceBucket)
+                        s3 = boto3.resource('s3')
+                        statusCode=''
+                        bucket = s3.Bucket(FaceBucket)
+                        response = bucket.create(
+                          ACL='public-read-write',
+                          CreateBucketConfiguration={
+                              'LocationConstraint': os.environ['AWS_REGION']
+                          },
+                        
+                        )
+                            
+                        client = boto3.client('s3')                              
+                        response = client.put_bucket_cors(
+                          Bucket=FaceBucket,
+                          CORSConfiguration={
+                            'CORSRules': [
+                                  {
+                                    'AllowedHeaders': ['*'],
+                                    'AllowedMethods': ['GET','PUT','POST','DELETE'],
+                                    'AllowedOrigins': ['*'],
+                                    'ExposeHeaders': ['x-amz-server-side-encryption','x-amz-request-id','x-amz-id-2'],
+                                    'MaxAgeSeconds': 3600
+                                  }
+                              ]
+                          }
+                        )
+       
+                        print ('The bucket ' + FaceBucket + ' creation failed ')
+                        print('Done...')
+                        responseData = {'Create': 'SUCCESS'}
+                        cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData)                     
+                  
+                      if event['RequestType'] == 'Delete':
+                        FaceBucket=event['ResourceProperties']['FaceBucket']
+                        print('Attempting to delete bucket ' + FaceBucket)
+                        s3 = boto3.resource('s3')
+                        statusCode=''
+                        bucket = s3.Bucket(FaceBucket)
+                        
+                        for obj in bucket.objects.filter():
+                            s3.Object(bucket.name, obj.key).delete()
+                        
+                        client = boto3.client('s3')   
+                        response = client.delete_bucket(
+                            Bucket=FaceBucket
+                        )
+                        
+                        print('Done...')
+                        responseData = {'Delete': 'SUCCESS'}
+                        cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData)
+                      else:
+                        responseData = {event['RequestType']: 'SUCCESS'}
                         cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData)
                   except Exception as e:
                       responseData = {'Error': str(e)}

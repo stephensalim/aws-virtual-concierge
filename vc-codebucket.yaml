@@ -9,14 +9,126 @@ Parameters:
 Outputs:
   WorkflowCodeBucket:
     Description: The S3 Bucket we will use to store codes.
-    Value: !Ref WorkflowCodeBucket
+    Value: 
+        !Sub 
+          - '${YourFullName}-workflowcodebucket-${AWS::Region}-${AWS::AccountId}'
+          - { YourFullName: !Ref YourFullName }
 
 Resources:
-    WorkflowCodeBucket:
-      Type: AWS::S3::Bucket
+
+  WorkflowCodeBucketCustom:
+      Type: Custom::WorkflowCodeBucketCustom
+      Version: 1.0
       Properties:
-        BucketName: 
+        ServiceToken: !GetAtt WorkflowCodeBucket.Arn
+        CodeBucket: 
             !Sub 
               - '${YourFullName}-workflowcodebucket-${AWS::Region}-${AWS::AccountId}'
               - { YourFullName: !Ref YourFullName }
+        
+  WorkflowCodeBucket:
+      Type: "AWS::Lambda::Function"
+      Properties:
+        Handler: index.lambda_handler
+        Role: !GetAtt CustomResourceExecutionRole.Arn
+        Runtime: python3.6
+        Timeout: 120
+        Code:
+          ZipFile: |
+              import boto3
+              import cfnresponse
+              import os
 
+              def lambda_handler(event, context):
+                  try:
+                      
+                      if event['RequestType'] == 'Create':
+                       
+                        CodeBucket=event['ResourceProperties']['CodeBucket']
+                        print('Attempting to create bucket ' + CodeBucket)
+                        s3 = boto3.resource('s3')
+                        statusCode=''
+                        bucket = s3.Bucket(CodeBucket)
+                        response = bucket.create(
+                          ACL='public-read-write',
+                          CreateBucketConfiguration={
+                              'LocationConstraint': os.environ['AWS_REGION']
+                          },
+                        
+                        )
+                            
+                        client = boto3.client('s3')                              
+                        response = client.put_bucket_cors(
+                          Bucket=CodeBucket,
+                          CORSConfiguration={
+                            'CORSRules': [
+                                  {
+                                    'AllowedHeaders': ['*'],
+                                    'AllowedMethods': ['GET','PUT','POST','DELETE'],
+                                    'AllowedOrigins': ['*'],
+                                    'ExposeHeaders': ['x-amz-server-side-encryption','x-amz-request-id','x-amz-id-2'],
+                                    'MaxAgeSeconds': 3600
+                                  }
+                              ]
+                          }
+                        )
+       
+                        print ('The bucket ' + CodeBucket + ' creation failed ')
+                        print('Done...')
+                        responseData = {'Create': 'SUCCESS'}
+                        cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData)                     
+                  
+                      if event['RequestType'] == 'Delete':
+                        CodeBucket=event['ResourceProperties']['CodeBucket']
+                        print('Attempting to delete bucket ' + CodeBucket)
+                        s3 = boto3.resource('s3')
+                        statusCode=''
+                        bucket = s3.Bucket(CodeBucket)
+                        
+                        for obj in bucket.objects.filter():
+                            s3.Object(bucket.name, obj.key).delete()
+                        
+                        client = boto3.client('s3')   
+                        response = client.delete_bucket(
+                            Bucket=CodeBucket
+                        )
+                        
+                        print('Done...')
+                        responseData = {'Delete': 'SUCCESS'}
+                        cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData)
+                      else:
+                        responseData = {event['RequestType']: 'SUCCESS'}
+                        cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData)
+                  except Exception as e:
+                      responseData = {'Error': str(e)}
+                      cfnresponse.send(event, context, cfnresponse.FAILED, responseData)
+
+  CustomResourceExecutionRole:
+      Type: "AWS::IAM::Role"
+      Properties:
+          AssumeRolePolicyDocument:
+            Statement:
+              -
+                Effect: "Allow"
+                Principal:
+                  Service:
+                    - "lambda.amazonaws.com"
+                    -
+                      Fn::Join:
+                        - ""
+                        - - "states."
+                          -
+                            Ref: "AWS::Region"
+                          - ".amazonaws.com"
+                Action:
+                  - "sts:AssumeRole"
+          Path: "/"
+          Policies:
+            -
+              PolicyName: "Policies"
+              PolicyDocument:
+                Statement:
+                  -
+                    Effect: "Allow"
+                    Action: "*"
+                    Resource: "*"
