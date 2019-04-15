@@ -3,33 +3,33 @@ Transform: 'AWS::Serverless-2016-10-31'
 Description : "Creates the Session Workflow StepFunctions" 
 
 Outputs:
-  SessionManagerFunction:
-    Description: "The Session Manager Lambda Function ARN to connect with the SessionManagerSNSTopic in Step 2"
-    Value: !GetAtt SessionManager.Arn
-  SessionTable:
-    Description: "The DynamoDB Containing Registered Session Table"
-    Value: !Ref SessionTable
-  NotificationAPIurl:
-    Description: "Notification Url"
-    Value: 
-        'Fn::Sub':
-            - "https://${Api}.execute-api.${AWS::Region}.amazonaws.com/Prod/notifyguest"
-            - { Api: !Ref NotificationResponseApi }
+  # SessionManagerFunction:
+  #   Description: "The Session Manager Lambda Function ARN to connect with the SessionManagerSNSTopic in Step 2"
+  #   Value: !GetAtt SessionManager.Arn
+  # SessionTable:
+  #   Description: "The DynamoDB Containing Registered Session Table"
+  #   Value: !Ref SessionTable
+  # NotificationAPIurl:
+  #   Description: "Notification Url"
+  #   Value: 
+  #       'Fn::Sub':
+  #           - "https://${Api}.execute-api.${AWS::Region}.amazonaws.com/Prod/notifyguest"
+  #           - { Api: !Ref NotificationResponseApi }
   SumerianMessageQueueFIFO:
     Description: The message queue that will be used to receive instructions from workflow.
     Value: !Ref SumerianMessageQueueFIFO
-  WorkflowNotificationSNSTopic:
-    Description: SNS Topic to send notification from Workflow
-    Value: !Ref WorkflowNotificationSNSTopic
+  # WorkflowNotificationSNSTopic:
+  #   Description: SNS Topic to send notification from Workflow
+  #   Value: !Ref WorkflowNotificationSNSTopic
   SessionManagerSNSTopic:
     Description: SNS topic responsible to send Face informatin to SessionManager Function
     Value: !Ref SessionManagerSNSTopic
-  WorkflowFunctionsExecutionRole:
-    Description: IAM Role that will be used by Lambda Functions and the test of the workflow process
-    Value: !GetAtt WorkflowFunctionsExecutionRole.Arn
-  WorkFlowStateMachine:
-    Description: Workflow State Machine
-    Value: !Ref WorkFlowStateMachine
+  # WorkflowFunctionsExecutionRole:
+  #   Description: IAM Role that will be used by Lambda Functions and the test of the workflow process
+  #   Value: !GetAtt WorkflowFunctionsExecutionRole.Arn
+  # WorkFlowStateMachine:
+  #   Description: Workflow State Machine
+  #   Value: !Ref WorkFlowStateMachine
   FaceBucket:
     Description: The S3 Bucket Containing people Mug Face.
     Value: 
