@@ -150,11 +150,11 @@ Here are the list of services we will be using:
 * [Amazon Simple Queue Service](https://aws.amazon.com/sqs/) to interface messaging from workflow to the Sumerian environment.
 * [Amazon API Gateway](https://aws.amazon.com/api-gateway/) to allow external service to response to the notification sent by the workflow.
 
-	<details><summary>[ EXPAND ] to see the detailed diagram</summary>
-	<p>
-	![step2_arch](./images/step2_arch.png)
-	</p>
-	</details>
+<details><summary>[ EXPAND ] to see the detailed diagram</summary>
+
+![step2_arch](./images/step2_arch.png)
+
+</details>
 
 
 ### Deploy Cognito Identity Pool ###
