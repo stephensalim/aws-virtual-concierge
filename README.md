@@ -43,9 +43,7 @@ Sumerian is based in javascript, and in our scene today there will be a number o
 * [Amazion Sumerian](https://aws.amazon.com/sumerian/) used to provide an representation of virtual host for the user. 
 
 	<details><summary>[ EXPAND ] to see the detailed architectual diagram.</summary>
-	<p>
 	![step4_arch](./images/step4_arch.png)
-	</p>
 	</details>
 
 
