@@ -44,7 +44,7 @@ Sumerian is based in javascript, and in our scene today there will be a number o
 
 	<details><summary>[ EXPAND ] to see the detailed architectual diagram.</summary>
 	<p>
-		![step4_arch](./images/step4_arch.png)
+	![step4_arch](./images/step4_arch.png)
 	</p>
 	</details>
 
@@ -152,7 +152,7 @@ Here are the list of services we will be using:
 
 	<details><summary>[ EXPAND ] to see the detailed diagram</summary>
 	<p>
-		![step2_arch](./images/step2_arch.png)
+	![step2_arch](./images/step2_arch.png)
 	</p>
 	</details>
 
