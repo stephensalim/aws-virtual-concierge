@@ -42,9 +42,11 @@ Sumerian is based in javascript, and in our scene today there will be a number o
 * [Amazon Cognito](https://aws.amazon.com/cognito/) to provide access for our sumerian scene to AWS APIs including to start the workflow.
 * [Amazion Sumerian](https://aws.amazon.com/sumerian/) used to provide an representation of virtual host for the user. 
 
-	<details><summary>[ EXPAND ] to see the detailed architectual diagram.</summary>
-	![step4_arch](./images/step4_arch.png)
-	</details>
+<details><summary>[ EXPAND ] to see the detailed architectual diagram.</summary>
+
+![step4_arch](./images/step4_arch.png)
+	
+</details>
 
 
 Please follow these steps to import your sumerian scene :
