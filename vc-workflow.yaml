@@ -13,8 +13,8 @@ Outputs:
     Description: The S3 Bucket Containing people Mug Face.
     Value: 
         !Sub 
-          - '${StackId}-facebucket-${AWS::Region}-${AWS::AccountId}'
-          - { StackId: !Ref 'AWS::StackId' }
+          - '${StackName}-facebucket-${AWS::Region}-${AWS::AccountId}'
+          - { StackName: !Ref 'AWS::StackName' }
   FaceCollectionId:
     Description: Your Recognition Face CollectionId
     Value: !GetAtt FaceCollectionCustom.CollectionId
@@ -546,8 +546,8 @@ Resources:
         ServiceToken: !GetAtt FaceCollection.Arn
         CollectionId: 
             !Sub 
-              - '${StackId}-collectionId-${AWS::Region}-${AWS::AccountId}'
-              - { StackId: !Ref 'AWS::StackId' }
+              - '${StackName}-collectionId-${AWS::Region}-${AWS::AccountId}'
+              - { StackName: !Ref 'AWS::StackName' }
   FaceCollection:
         Type: "AWS::Lambda::Function"
         Properties:
@@ -607,8 +607,8 @@ Resources:
         ServiceToken: !GetAtt S3BucketFaceCollection.Arn
         FaceBucket: 
             !Sub 
-              - '${StackId}-facebucket-${AWS::Region}-${AWS::AccountId}'
-              - { StackId: !Ref 'AWS::StackId' }
+              - '${StackName}-facebucket-${AWS::Region}-${AWS::AccountId}'
+              - { StackName: !Ref 'AWS::StackName' }
   S3BucketFaceCollection:
         Type: "AWS::Lambda::Function"
         Properties:
@@ -626,7 +626,7 @@ Resources:
                   try:
                       
                       if event['RequestType'] == 'Create':
-                       
+                        
                         FaceBucket=event['ResourceProperties']['FaceBucket']
                         print('Attempting to create bucket ' + FaceBucket)
                         s3 = boto3.resource('s3')
