@@ -437,5 +437,11 @@ Please follow [this guide](https://docs.aws.amazon.com/sumerian/latest/userguide
 
 **That's all folks !**
 
-I hope this lab has been useful and fun. I certainly had lots of fun building it. I would love to hear your feedback on the things that you found to be good and could be improved. If you are inclined, please drop me an email and let me know your feedback.
+I hope this lab has been useful and fun. 
+I certainly had lots of fun building it.
+I would love to hear your feedback on the things that you found to be good and could be improved. 
+If you are inclined, please drop me an email / let me know how this can be improved.
+
+Also, if you followed through this session thoroughly, you would have your image taken and indexed in the environment.
+To clean this up, please follow this instructions below to delete the 2 CloudFormation stacks you've deployed, and delete the sumerian scene.
 

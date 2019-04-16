@@ -3,65 +3,40 @@ Transform: 'AWS::Serverless-2016-10-31'
 Description : "Creates the Session Workflow StepFunctions" 
 
 Outputs:
-  # SessionManagerFunction:
-  #   Description: "The Session Manager Lambda Function ARN to connect with the SessionManagerSNSTopic in Step 2"
-  #   Value: !GetAtt SessionManager.Arn
-  # SessionTable:
-  #   Description: "The DynamoDB Containing Registered Session Table"
-  #   Value: !Ref SessionTable
-  # NotificationAPIurl:
-  #   Description: "Notification Url"
-  #   Value: 
-  #       'Fn::Sub':
-  #           - "https://${Api}.execute-api.${AWS::Region}.amazonaws.com/Prod/notifyguest"
-  #           - { Api: !Ref NotificationResponseApi }
   SumerianMessageQueueFIFO:
     Description: The message queue that will be used to receive instructions from workflow.
     Value: !Ref SumerianMessageQueueFIFO
-  # WorkflowNotificationSNSTopic:
-  #   Description: SNS Topic to send notification from Workflow
-  #   Value: !Ref WorkflowNotificationSNSTopic
   SessionManagerSNSTopic:
     Description: SNS topic responsible to send Face informatin to SessionManager Function
     Value: !Ref SessionManagerSNSTopic
-  # WorkflowFunctionsExecutionRole:
-  #   Description: IAM Role that will be used by Lambda Functions and the test of the workflow process
-  #   Value: !GetAtt WorkflowFunctionsExecutionRole.Arn
-  # WorkFlowStateMachine:
-  #   Description: Workflow State Machine
-  #   Value: !Ref WorkFlowStateMachine
   FaceBucket:
     Description: The S3 Bucket Containing people Mug Face.
     Value: 
         !Sub 
-          - '${YourFullName}-facebucket-${AWS::Region}-${AWS::AccountId}'
-          - { YourFullName: !Ref YourFullName }
+          - '${StackId}-facebucket-${AWS::Region}-${AWS::AccountId}'
+          - { StackId: !Ref 'AWS::StackId' }
   FaceCollectionId:
     Description: Your Recognition Face CollectionId
     Value: !GetAtt FaceCollectionCustom.CollectionId
   VisitorTable:
     Description: The DynamoDB Containing Registered Visitor Table
     Value: !Ref VisitorTable
-  # WorkflowCodeBucket:
-  #   Description: The S3 Bucket we will use to store codes.
-  #   Value: 
-  #       !Sub 
-  #         - '${YourFullName}-workflowcodebucket-${AWS::Region}-${AWS::AccountId}'
-  #         - { YourFullName: !Ref YourFullName }
 
 Parameters: 
   HostEmailAddress: 
     Type: String
     Description: Please enter the email addess you would like the virtual concierge to send notification to.
-  YourFullName: 
-    Type: String
-    Description: Please enter your full name without space in lower case, this will be added as prefix to your bucket name
+  # YourFullName: 
+  #   Type: String
+  #   Default: 
+  #   Description: Please enter your full name without space in lower case, this will be added as prefix to your bucket name
 
 
 Resources:
             
   #########################################################
   # Resouces for the entire workflow to do it's acitivity #
+  #( This is not a secured, please take measure to secure if going to prod)
   #########################################################
   WorkflowFunctionsExecutionRole:
     Type: "AWS::IAM::Role"
@@ -576,8 +551,8 @@ Resources:
         ServiceToken: !GetAtt FaceCollection.Arn
         CollectionId: 
             !Sub 
-              - '${YourFullName}-collectionId-${AWS::Region}-${AWS::AccountId}'
-              - { YourFullName: !Ref YourFullName }
+              - '${StackId}-collectionId-${AWS::Region}-${AWS::AccountId}'
+              - { StackId: !Ref 'AWS::StackId' }
   FaceCollection:
         Type: "AWS::Lambda::Function"
         Properties:
@@ -637,8 +612,8 @@ Resources:
         ServiceToken: !GetAtt S3BucketFaceCollection.Arn
         FaceBucket: 
             !Sub 
-              - '${YourFullName}-facebucket-${AWS::Region}-${AWS::AccountId}'
-              - { YourFullName: !Ref YourFullName }
+              - '${StackId}-facebucket-${AWS::Region}-${AWS::AccountId}'
+              - { StackId: !Ref 'AWS::StackId' }
   S3BucketFaceCollection:
         Type: "AWS::Lambda::Function"
         Properties:
