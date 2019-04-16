@@ -3,7 +3,7 @@
 --
 **Author :** Stephen Salim | AWS Partner Solutions Architect | Email : sssalim@amazon.com
 
-![main_arch](./images/preston_hello.png)
+![main_arch](./images/preston.gif)
 
 Welcome to "Building an AI Virtual Concierge lab" !
 

@@ -26,12 +26,7 @@ Parameters:
   HostEmailAddress: 
     Type: String
     Description: Please enter the email addess you would like the virtual concierge to send notification to.
-  # YourFullName: 
-  #   Type: String
-  #   Default: 
-  #   Description: Please enter your full name without space in lower case, this will be added as prefix to your bucket name
-
-
+    
 Resources:
             
   #########################################################
