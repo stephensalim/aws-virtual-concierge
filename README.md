@@ -1,7 +1,7 @@
 
 # **Building an AI Virtual Concierge lab**
 --
-**Author :** Stephen Salim | AWS Partner Solutions Architect | Email : sssalim@amazon.com
+**Author :** Stephen Salim | AWS Well Architected Solutions Architect | Email : sssalim@amazon.com
 
 ![main_arch](./images/preston.gif)
 
@@ -63,7 +63,7 @@ Please follow these steps to import your sumerian scene :
 	
 	![step4.4](./images/step4.4.png)
 
-4. Download Sumerian scene bundle from [HERE](https://s3-us-west-2.amazonaws.com/sssalim-devlabs-virtualconcierge/devlabs.zip)
+4. Download Sumerian scene bundle from [HERE](https://github.com/stephensalim/aws-virtual-concierge/raw/master/sumerian-bundle/devlabs.zip)
 	
 5. Click **Import Asset**.
 	
